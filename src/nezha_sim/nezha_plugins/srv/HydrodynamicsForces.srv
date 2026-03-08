@@ -1,0 +1,34 @@
+
+---
+# Response
+
+float64 buoyancy_x
+float64 buoyancy_y
+float64 buoyancy_z
+
+# 阻尼力 (Body Frame)
+float64 damping_x
+float64 damping_y
+float64 damping_z
+
+# 波浪力 (World Frame)
+float64 wave_x
+float64 wave_y
+float64 wave_z
+
+# 附加质量力
+float64 added_mass_x
+float64 added_mass_y
+float64 added_mass_z
+
+# 科氏力
+float64 coriolis_x
+float64 coriolis_y
+float64 coriolis_z
+
+# 浸没比例
+float64 submersion_ratio
+
+# 时间戳
+float64 sim_time
+

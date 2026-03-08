@@ -1,0 +1,15 @@
+# Request
+float64 number
+float64 amplitude
+float64 period
+float64 direction_x
+float64 direction_y
+float64 scale
+float64 angle
+float64 steepness
+---
+# Response
+bool success
+string message
+
+

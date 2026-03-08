@@ -1,0 +1,148 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="underwater_spotlight_gimbal">
+    <static>false</static>
+    <pose>0 0 0 0 0 0</pose>
+
+    <link name="base_link">
+      <pose>0 0 0 0 0 0</pose>
+      <visual name="base_visual">
+        <geometry><cylinder><radius>0.3</radius><length>0.2</length></cylinder></geometry>
+        <pose>0 0 0.1 0 0 0</pose>
+      </visual>
+      <collision name="base_collision">
+        <geometry><cylinder><radius>0.3</radius><length>0.2</length></cylinder></geometry>
+        <pose>0 0 0.1 0 0 0</pose>
+      </collision>
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>0.01</ixx><ixy>0.0</ixy><ixz>0.0</ixz>
+          <iyy>0.01</iyy><iyz>0.0</iyz>
+          <izz>0.01</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <link name="yaw_link">
+      <pose>0 0 0.2 0 0 0</pose>
+      <visual name="yaw_ring_visual">
+        <geometry><cylinder><radius>0.28</radius><length>0.06</length></cylinder></geometry>
+      </visual>
+      <collision name="yaw_collision">
+        <geometry><cylinder><radius>0.28</radius><length>0.06</length></cylinder></geometry>
+      </collision>
+      <inertial>
+        <mass>0.5</mass>
+        <inertia>
+          <ixx>0.005</ixx><ixy>0.0</ixy><ixz>0.0</ixz>
+          <iyy>0.005</iyy><iyz>0.0</iyz>
+          <izz>0.005</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <link name="pitch_link">
+      <pose>0 0 0.26 0 0 0</pose>
+      <visual name="pitch_bar_visual">
+        <geometry><box><size>0.06 0.5 0.06</size></box></geometry>
+      </visual>
+      <collision name="pitch_collision">
+        <geometry><box><size>0.06 0.5 0.06</size></box></geometry>
+      </collision>
+      <inertial>
+        <mass>0.3</mass>
+        <inertia>
+          <ixx>0.003</ixx><ixy>0.0</ixy><ixz>0.0</ixz>
+          <iyy>0.003</iyy><iyz>0.0</iyz>
+          <izz>0.003</izz>
+        </inertia>
+      </inertial>
+    </link>
+
+    <link name="spotlight_link">
+      <pose>0 0 0.26 0 0 0</pose>
+      <visual name="spotlight_visual">
+        <geometry><cylinder><radius>0.2</radius><length>5.0</length></cylinder></geometry>
+        <pose>0 0 2.5 0 0 0</pose>
+      </visual>
+      <collision name="spotlight_collision">
+        <geometry><cylinder><radius>0.2</radius><length>5.0</length></cylinder></geometry>
+        <pose>0 0 2.5 0 0 0</pose>
+      </collision>
+      <inertial>
+        <mass>1.0</mass>
+        <inertia>
+          <ixx>0.02</ixx><ixy>0.0</ixy><ixz>0.0</ixz>
+          <iyy>0.02</iyy><iyz>0.0</iyz>
+          <izz>0.02</izz>
+        </inertia>
+      </inertial>
+      <light name="spotlight_light" type="spot">
+        <pose>0 0 0.3 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>0.3 0.3 0.3 1</specular>
+        <attenuation>
+          <range>30</range><constant>0.2</constant><linear>0.01</linear><quadratic>0.001</quadratic>
+        </attenuation>
+        <direction>0 0 1</direction>
+        <spot><inner_angle>0.2</inner_angle><outer_angle>0.7</outer_angle><falloff>0.7</falloff></spot>
+        <cast_shadows>true</cast_shadows>
+      </light>
+    </link>
+
+    <joint name="base_to_yaw" type="revolute">
+      <parent>base_link</parent>
+      <child>yaw_link</child>
+      <pose>0 0 0.2 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit><lower>-3.14159</lower><upper>3.14159</upper></limit>
+      </axis>
+    </joint>
+
+    <joint name="yaw_to_pitch" type="revolute">
+      <parent>yaw_link</parent>
+      <child>pitch_link</child>
+      <pose>0 0 0.26 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit><lower>-1.2</lower><upper>1.2</upper></limit>
+      </axis>
+    </joint>
+
+    <joint name="pitch_to_spotlight" type="fixed">
+      <parent>pitch_link</parent>
+      <child>spotlight_link</child>
+    </joint>
+  </model>
+<gazebo>
+  <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>/spotlight</robotNamespace>
+  </plugin>
+</gazebo>
+
+<!-- Transmissions for joints (ROS1) -->
+<transmission name="base_yaw_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <actuator name="base_yaw_motor">
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+  <joint name="base_yaw_joint">
+    <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+  </joint>
+</transmission>
+
+<transmission name="head_pitch_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <actuator name="head_pitch_motor">
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+  <joint name="head_pitch_joint">
+    <hardwareInterface>hardware_interface/PositionJointInterface</hardwareInterface>
+  </joint>
+</transmission>
+
+</sdf>
+
+

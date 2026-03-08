@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot name="nezha_rocket" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+ <xacro:include filename="$(find nezha_description)/${namespace}/urdf/multirotor_base_nezha.xacro"/>
+   <xacro:include filename="$(find nezha_description)/${namespace}/urdf/nezha_plugin.xacro"/>
+  <!-- Create the rexrov -->
+  <xacro:nezha_base
+    namespace="$(arg namespace)"
+    inertial_reference_frame="$(arg inertial_reference_frame)">
+    <!-- The underwater object plugin is given as an input block parameter to
+     allow the addition of external models of manipulator units -->
+    <gazebo>
+      <plugin name="uuv_plugin" filename="libuuv_underwater_object_ros_plugin.so">
+        <fluid_density>1028.0</fluid_density>
+        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+        <debug>$(arg debug)</debug>
+        <!-- Adding the hydrodynamic and hydrostatic parameters for the vehicle-->
+        <xacro:nezha_hydro_model namespace="$(arg namespace)"/>
+      </plugin>
+    </gazebo>
+  </xacro:nezha_base>
+
+<xacro:default_joint_state_publisher namespace="${namespace}" update_rate="10"/>
+
+</robot>
+

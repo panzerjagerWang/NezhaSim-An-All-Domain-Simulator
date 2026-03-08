@@ -1,0 +1,4 @@
+Base path: /home/w/Nezha_ws
+Source space: /home/w/Nezha_ws/src
+Build space: /home/w/Nezha_ws/build
+The build space at '/home/w/Nezha_ws/build' was previously built by 'catkin build'. Please remove the build space or pick a different build space.

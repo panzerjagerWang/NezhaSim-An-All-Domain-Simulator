@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>nezha_gazebo</name>
+  <version>0.1.0</version>
+  <description>All Gazebo models &amp; worlds for the Nezha project.</description>
+
+  <maintainer email="you@example.com">Your Name</maintainer>
+  <license>MIT</license>
+
+  <!-- 构建工具 -->
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <!-- 运行期依赖 -->
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>xacro</exec_depend>
+</package>
+

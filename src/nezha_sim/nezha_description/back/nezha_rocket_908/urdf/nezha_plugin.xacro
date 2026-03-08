@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+
+    <gazebo reference="$(arg namespace)_base_link">
+    <plugin name="wave_probe_plugin" filename="libnezha_waveProbePlugin.so">
+
+      <wavefield_name>nezha_ocean_waves</wavefield_name>
+      <characteristic_len>1.2</characteristic_len>
+
+      <z_top_offset>0.1</z_top_offset>
+
+    </plugin>
+  </gazebo>
+    <gazebo>
+    <plugin name="robot_state_plugin" filename="libnezha_robotStatePlugin.so">
+      <default_fluid_density>1028.0</default_fluid_density>
+      <default_volume_scaling>1.0</default_volume_scaling>
+      <default_added_mass_scaling>1.0</default_added_mass_scaling>
+      <default_damping_scaling>1.0</default_damping_scaling>
+      <water_surface_height>0.0</water_surface_height>
+      <default_current_velocity>1.5</default_current_velocity>
+      <update_interval>0.05</update_interval>
+    </plugin>
+  </gazebo>
+</robot>

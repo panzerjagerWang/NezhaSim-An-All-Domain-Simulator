@@ -1,0 +1,123 @@
+<?xml version="1.0" ?>
+<!-- Copyright (c) 2016 The UUV Simulator Authors.
+     All rights reserved.
+
+     Licensed under the Apache License, Version 2.0 (the "License");
+     you may not use this file except in compliance with the License.
+     You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+     Unless required by applicable law or agreed to in writing, software
+     distributed under the License is distributed on an "AS IS" BASIS,
+     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+     See the License for the specific language governing permissions and
+     limitations under the License.
+-->
+<sdf version="1.5">
+  <world name="nezha_lake">
+<physics name="default_physics" default="true" type="ode">
+  <max_step_size>0.002</max_step_size>
+  <real_time_factor>1</real_time_factor>
+  <real_time_update_rate>500</real_time_update_rate>
+</physics>
+
+<scene>
+  <!-- 浅绿色环境光 -->
+  <ambient>0.15 0.25 0.15 0.7</ambient>
+  <sky>
+    <clouds>
+      <speed>12</speed>
+    </clouds>
+  </sky>
+  <shadows>0</shadows>
+  <fog>
+    <!-- 非常淡的浅绿色雾效 -->
+    <color>0.6 0.85 0.65 0.3</color>
+    <type>linear</type>
+    <density>0.03</density>
+    <start>20</start>
+    <end>60</end>
+  </fog>
+</scene>
+
+<spherical_coordinates>
+  <latitude_deg>63.4534333</latitude_deg>
+  <longitude_deg>10.4055667</longitude_deg>
+</spherical_coordinates>
+
+<!-- 浅绿色光源 -->
+<light type="directional" name="sun_diffuse_1">
+  <pose>-100 500 -20 0 0 0</pose>
+  <diffuse>0.7 0.9 0.75 1</diffuse>
+  <specular>0.8 1 0.85 1</specular>
+  <direction>-1 -1 0</direction>
+  <cast_shadows>true</cast_shadows>
+</light>
+
+<light type="directional" name="sun_diffuse_2">
+  <pose>100 50 20 0 0 0</pose>
+  <diffuse>0.55 0.7 0.6 1</diffuse>
+  <specular>0.3 0.5 0.35 1</specular>
+  <direction>-0.3 -0.3 -1</direction>
+  <cast_shadows>true</cast_shadows>
+</light>
+
+<light type="directional" name="sun_diffuse_3">
+  <pose>-150 -130 50 0 0 0</pose>
+  <diffuse>0.6 0.75 0.65 1</diffuse>
+  <specular>0.4 0.6 0.45 1</specular>
+  <direction>0.5 0.5 -1</direction>
+  <cast_shadows>true</cast_shadows>
+</light>
+
+
+    <!-- Global light source -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Virtual NED frame -->
+    <include>
+      <uri>model://ned_frame</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    <!-- Virtual NED frame -->
+        <include>
+      <uri>model://nezha_ocean_waves</uri>
+      <pose>0 0 0 0 0 0</pose>
+    </include>
+    <plugin name="underwater_current_plugin" filename="libuuv_underwater_current_ros_plugin.so">
+      <namespace>hydrodynamics</namespace>
+      <constant_current>
+        <topic>current_velocity</topic>
+        <velocity>
+          <mean>0</mean>
+          <min>0</min>
+          <max>5</max>
+          <mu>0.0</mu>
+          <noiseAmp>0.0</noiseAmp>
+        </velocity>
+
+        <horizontal_angle>
+          <mean>0</mean>
+          <min>-3.141592653589793238</min>
+          <max>3.141592653589793238</max>
+          <mu>0.0</mu>
+          <noiseAmp>0.0</noiseAmp>
+        </horizontal_angle>
+
+        <vertical_angle>
+          <mean>0</mean>
+          <min>-3.141592653589793238</min>
+          <max>3.141592653589793238</max>
+          <mu>0.0</mu>
+          <noiseAmp>0.0</noiseAmp>
+        </vertical_angle>
+      </constant_current>
+    </plugin>
+    <plugin name="link_attacher" filename="libgazebo_ros_link_attacher.so"/>
+    <plugin name="sc_interface" filename="libuuv_sc_ros_interface_plugin.so"/>
+    <plugin name="ros_interface_plugin" filename="librotors_gazebo_ros_interface_plugin.so"/>
+  </world>
+</sdf>

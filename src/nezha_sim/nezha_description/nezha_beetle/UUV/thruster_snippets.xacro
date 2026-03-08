@@ -1,0 +1,215 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="box_inertia" params="x y z mass">
+    <inertia ixx="${0.0833333 * mass * (y*y + z*z)}" ixy="0.0" ixz="0.0"
+      iyy="${0.0833333 * mass * (x*x + z*z)}" iyz="0.0"
+      izz="${0.0833333 * mass * (x*x + y*y)}" />
+  </xacro:macro>
+
+  <!-- Macro for the inertial properties of a box -->
+  <xacro:macro name="box_inertial" params="x y z mass *origin">
+    <inertial>
+      <mass value="${mass}" />
+      <xacro:insert_block name="origin" />
+      <xacro:box_inertia x="${x}" y="${y}" z="${z}" mass="${mass}" />
+    </inertial>
+  </xacro:macro>
+  
+
+  <xacro:macro name="rotor_dyn_first_order_macro" params="time_constant">
+    <dynamics>
+      <type>FirstOrder</type>
+      <timeConstant>${time_constant}</timeConstant>
+    </dynamics>
+  </xacro:macro>
+  <xacro:macro name="thruster_cf_basic_macro"
+    params="rotor_constant">
+    <conversion>
+      <type>Basic</type>
+      <rotorConstant>${rotor_constant}</rotorConstant>
+    </conversion>
+  </xacro:macro>
+  <!-- First order dynamics -->
+
+  <xacro:macro name="rotor_dyn_first_order_macro" params="time_constant">
+    <dynamics>
+      <type>FirstOrder</type>
+      <timeConstant>${time_constant}</timeConstant>
+    </dynamics>
+  </xacro:macro>
+
+  <xacro:macro name="thruster_cf_basic_macro"
+    params="rotor_constant">
+    <conversion>
+      <type>Basic</type>
+      <rotorConstant>${rotor_constant}</rotorConstant>
+    </conversion>
+  </xacro:macro>
+
+  <!--
+    2) Dead-zone nonlinearity described in [1]
+      [1] Bessa, Wallace Moreira, Max Suell Dutra, and Edwin Kreuzer. "Thruster
+          dynamics compensation for the positioning of underwater robotic vehicles
+          through a fuzzy sliding mode based approach." ABCM Symposium Series in
+          Mechatronics. Vol. 2. 2006.
+      Input: x
+      Output: thrust
+      Function:
+        thrust = rotorConstantL * (x * abs(x) - deltaL), if x * abs(x) <= deltaL
+        thrust = 0, if deltaL < x * abs(x) < deltaR
+        thrust = rotorConstantR * (x * abs(x) - deltaR), if x * abs(x) >= deltaL
+  -->
+  <xacro:macro name="thruster_cf_dead_zone_macro"
+    params="rotor_constant_l
+            rotor_constant_r
+            delta_l
+            delta_r">
+    <conversion>
+      <type>Bessa</type>
+      <rotorConstantL>${rotor_constant_l}</rotorConstantL>
+      <rotorConstantR>${rotor_constant_r}</rotorConstantR>
+      <deltaL>${delta_l}</deltaL>
+      <deltaR>${delta_r}</deltaR>
+    </conversion>
+  </xacro:macro>
+
+  <!--
+    3) Linear interpolation
+      If you have access to the thruster's data sheet, for example,
+      you can enter samples of the curve's input and output values
+      and the thruster output will be found through linear interpolation
+      of the given samples.
+  -->
+  <xacro:macro name="thruster_cf_linear_interp_macro"
+    params="input_values
+            output_values">
+    <conversion>
+      <type>LinearInterp</type>
+      <inputValues>${input_values}</inputValues>
+      <outputValues>${output_values}</outputValues>
+    </conversion>
+  </xacro:macro>
+
+  <!-- THRUSTER MODULE MACROS  -->
+
+  <xacro:macro name="generic_thruster_macro"
+    params="namespace
+            thruster_id
+            *origin
+            mesh_filename
+            mass
+            scale_thruster
+            *dynamics
+            *conversion">
+    <joint name="${namespace}/thruster_${thruster_id}_joint" type="continuous">
+      <xacro:insert_block name="origin"/>
+      <axis xyz="1 0 0"/>
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/thruster_${thruster_id}"/>
+    </joint>
+
+    <link name="${namespace}/thruster_${thruster_id}">
+  <xacro:box_inertial x="0.02" y="0.02" z="0.02" mass="${mass}">
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </xacro:box_inertial>
+      <visual>
+        <origin rpy="0 0 0" xyz="0 0 0"/>
+        <geometry>
+          <mesh filename="${mesh_filename}" scale="${scale_thruster} ${scale_thruster} ${scale_thruster}"/>
+        </geometry>
+      </visual>
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry>
+      <cylinder radius="0.01" length="0.04"/>
+    </geometry>
+  </collision>
+    </link>
+
+    <gazebo>
+      <plugin name="${namespace}_${thruster_id}_thruster_model" filename="libuuv_thruster_ros_plugin.so">
+        <linkName>${namespace}/thruster_${thruster_id}</linkName>
+        <jointName>${namespace}/thruster_${thruster_id}_joint</jointName>
+        <thrusterID>${thruster_id}</thrusterID>
+        <xacro:insert_block name="dynamics"/>
+        <xacro:insert_block name="conversion"/>
+      </plugin>
+    </gazebo>
+
+    <gazebo reference="${namespace}/thruster_${thruster_id}">
+      <selfCollide>false</selfCollide>
+    </gazebo>
+  </xacro:macro>
+
+  <!--
+    Thruster model with first order dynamic model for the rotor dynamics
+    and a proportional non-linear steady-state conversion from the rotor's
+    angular velocity to output thrust force
+  -->
+
+  <xacro:macro name="thruster_module_first_order_basic_fcn_macro"
+      params="namespace
+              thruster_id
+              *origin
+              mesh_filename
+              mass
+              scale_thruster
+              dyn_time_constant
+              rotor_constant">
+    <xacro:generic_thruster_macro
+      namespace="${namespace}"
+      mass="${mass}"
+      scale_thruster = "${scale_thruster}"
+      thruster_id="${thruster_id}"
+      mesh_filename="${mesh_filename}">
+      <xacro:insert_block name="origin"/>
+      <xacro:rotor_dyn_first_order_macro time_constant="${dyn_time_constant}"/>
+      <xacro:thruster_cf_basic_macro rotor_constant="${rotor_constant}"/>
+    </xacro:generic_thruster_macro>
+  </xacro:macro>
+  
+<xacro:macro name="paddle"
+    params="robot_namespace parent mass_paddle paddle_number color use_own_mesh mesh rotor_constant dyn_time_constant scale *origin *inertia" >
+    <joint name="${robot_namespace}/paddle_${paddle_number}_joint" type="continuous">
+      <xacro:insert_block name="origin" />
+      <axis xyz="1 0 0" />
+      <parent link="${parent}" />
+      <child link="${robot_namespace}/paddle_${paddle_number}" />
+    </joint>
+    <link name="${robot_namespace}/paddle_${paddle_number}">
+      <inertial>
+        <mass value="${mass_paddle}" /> <!-- [kg] -->
+        <xacro:insert_block name="inertia" />
+      </inertial>
+      <visual>
+        <geometry>
+          <xacro:if value="${use_own_mesh}">
+            <mesh filename="${mesh}"
+              scale="${scale}" /> 
+          </xacro:if>
+          <xacro:unless value="${use_own_mesh}">
+            <mesh filename="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+              scale="${scale_paddle} ${scale_paddle} ${scale_paddle}" />
+          </xacro:unless>
+        </geometry>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="0.00005" radius="${scale_paddle}" /> <!-- [m] -->
+        </geometry>
+      </collision>
+    </link>
+    <gazebo reference="${robot_namespace}/paddle_${paddle_number}">
+      <material>Gazebo/${color}</material>
+    </gazebo>
+    <gazebo>
+      <plugin name="${robot_namespace}_${paddle_number}_thruster_model" filename="libuuv_thruster_ros_plugin.so">
+        <linkName>${robot_namespace}/paddle_${paddle_number}</linkName>
+        <jointName>${robot_namespace}/paddle_${paddle_number}_joint</jointName>
+        <thrusterID>${paddle_number}</thrusterID>
+        <xacro:rotor_dyn_first_order_macro time_constant="${dyn_time_constant}"/>
+        <xacro:thruster_cf_basic_macro rotor_constant="${rotor_constant}"/>
+      </plugin>
+    </gazebo>
+</xacro:macro>
+</robot>

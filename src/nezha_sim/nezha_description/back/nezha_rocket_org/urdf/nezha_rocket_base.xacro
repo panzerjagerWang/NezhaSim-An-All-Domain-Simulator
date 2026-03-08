@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<robot name="nezha_rocket" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+ <xacro:include filename="$(find nezha_description)/${namespace}/urdf/multirotor_base_nezha.xacro"/>
+<xacro:property name="body_inertia">
+  <inertia ixx="0.00169869" ixy="5.67e-7" ixz="0.000268585" iyy="0.004912215" iyz="-5.60e-7" izz="0.005584932" /> 
+</xacro:property>
+<xacro:property name="rotor_inertia">
+  <xacro:box_inertia x="${radius_rotor}" y="0.015" z="0.003" mass="${mass_rotor * rotor_velocity_slowdown_sim}" />
+</xacro:property>
+<xacro:multirotor_base_macro
+  robot_namespace="${namespace}"
+  mass="${mass}"
+  body_width="${body_width}"
+  body_height="${body_height}"
+  use_mesh_file="${use_mesh_file}"
+  mesh_file="${mesh_file}">
+  
+  <xacro:insert_block name="body_inertia" />
+  <gazebo>
+  <plugin name="uuv_plugin" filename="libnezha_underwater_object_ros_plugin.so">
+  <fluid_density>1028.0</fluid_density>
+  <flow_velocity_topic>${namespace}/current_velocity</flow_velocity_topic>
+  <debug>$(arg debug)</debug>
+        <xacro:nezha_hydro_model namespace="$(arg namespace)"/>
+  </plugin>
+  </gazebo>
+</xacro:multirotor_base_macro>
+  <!-- 1. 相位切换插件 -->
+  <xacro:nezha_phase_switch_plugin 
+    robot_namespace="${namespace}"
+    switch_topic="/${namespace}/phase_switch"
+    status_topic="/${namespace}/phase_status"/>
+  
+  <!-- 2. 机器人状态插件 -->
+  <xacro:nezha_robot_state_plugin 
+    robot_namespace="${namespace}"
+    state_topic="/${namespace}/robot_state"
+    odom_topic="/${namespace}/odom"/>
+  
+  <!-- 3. 地形检测插件 -->
+  <xacro:nezha_terrain_detector_plugin 
+    link_name="${namespace}/base_link"
+    detection_topic="/${namespace}/terrain_detection"/>
+  
+  <!-- 4. 替换原有的跨介质阻力插件 -->
+  <xacro:nezha_transmedia_drag_plugin 
+    link_name="${namespace}/base_link"
+    config_file="$(find nezha_description)/config/transmedia_config.json"
+    phase_service="/${namespace}/get_phase_sample"
+    drag_topic="/${namespace}/drag_forces"/>
+
+</robot>
+

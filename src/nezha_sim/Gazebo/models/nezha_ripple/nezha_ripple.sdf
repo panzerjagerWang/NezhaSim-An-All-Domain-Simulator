@@ -1,0 +1,29 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="nezha_ripple">
+    <static>true</static>
+    <pose>0 0 0 0 0 0</pose>
+    <link name="ripple_link">
+        <gravity>false</gravity>
+    	<self_collide>false</self_collide>       
+	<allow_auto_disable>true</allow_auto_disable>
+      <visual name="ripple_visual">
+        <geometry>
+          <plane>
+            <normal>0 0 1</normal>
+            <size>1 1</size>
+          </plane>
+        </geometry>
+        <material>
+          <script>
+            <uri>model://nezha_ripple/materials/scripts</uri>
+            <uri>model://nezha_ripple/materials/textures</uri>
+            <name>nezha/nezha_ripple</name>
+          </script>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
+
+

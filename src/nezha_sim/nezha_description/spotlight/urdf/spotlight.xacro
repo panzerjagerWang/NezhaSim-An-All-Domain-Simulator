@@ -1,0 +1,171 @@
+<?xml version="1.0"?>
+<robot name="underwater_spotlight_gimbal" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 可选参数 -->
+  <xacro:arg name="use_ignition" default="false"/>
+  <xacro:property name="ns" value="/spotlight"/>
+
+  <!-- 材质 -->
+  <material name="Grey"><color rgba="0.6 0.6 0.6 1.0"/></material>
+  <material name="DarkGrey"><color rgba="0.3 0.3 0.3 1.0"/></material>
+
+  <!-- 1) base_link -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.3" length="0.2"/></geometry>
+      <material name="Grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.1" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.3" length="0.2"/></geometry>
+    </collision>
+  </link>
+
+  <!-- 2) yaw_link -->
+  <link name="yaw_link">
+    <inertial>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <mass value="0.5"/>
+      <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.005"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.28" length="0.06"/></geometry>
+      <material name="DarkGrey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.28" length="0.06"/></geometry>
+    </collision>
+  </link>
+
+  <!-- 3) pitch_link -->
+  <link name="pitch_link">
+    <inertial>
+      <origin xyz="0 0 0.26" rpy="0 0 0"/>
+      <mass value="0.3"/>
+      <inertia ixx="0.003" ixy="0" ixz="0" iyy="0.003" iyz="0" izz="0.003"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0.26" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.5 0.06"/></geometry>
+      <material name="Grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0.26" rpy="0 0 0"/>
+      <geometry><box size="0.06 0.5 0.06"/></geometry>
+    </collision>
+  </link>
+
+  <!-- 4) spotlight_link（灯体） -->
+  <link name="spotlight_link">
+    <inertial>
+      <origin xyz="0 0 0.26" rpy="0 0 0"/>
+      <mass value="1.0"/>
+      <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.02"/>
+    </inertial>
+    <visual>
+      <origin xyz="0 0 2.76" rpy="0 0 0"/> <!-- 长度5.0，中心在2.5，此处在pitch_link上再抬0.26，合计2.76 -->
+      <geometry><cylinder radius="0.2" length="5.0"/></geometry>
+      <material name="Grey"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 2.76" rpy="0 0 0"/>
+      <geometry><cylinder radius="0.2" length="5.0"/></geometry>
+    </collision>
+  </link>
+
+  <!-- joints -->
+  <!-- yaw（Z轴转动） -->
+  <joint name="base_yaw_joint" type="revolute">
+    <parent link="base_link"/>
+    <child link="yaw_link"/>
+    <origin xyz="0 0 0.2" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="-3.14159" upper="3.14159" effort="10" velocity="2.0"/>
+    <dynamics damping="0.1" friction="0.0"/>
+  </joint>
+
+  <!-- pitch（Y轴转动） -->
+  <joint name="head_pitch_joint" type="revolute">
+    <parent link="yaw_link"/>
+    <child link="pitch_link"/>
+    <origin xyz="0 0 0.06" rpy="0 0 0"/> <!-- 由 yaw_link 顶部到 pitch_link 轴的微调 -->
+    <axis xyz="0 1 0"/>
+    <limit lower="-1.2" upper="1.2" effort="10" velocity="2.0"/>
+    <dynamics damping="0.1" friction="0.0"/>
+  </joint>
+
+  <!-- 固定灯体 -->
+  <joint name="pitch_to_spotlight" type="fixed">
+    <parent link="pitch_link"/>
+    <child link="spotlight_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+
+<!-- Gazebo 控制插件 -->
+<gazebo>
+  <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
+    <robotNamespace>${ns}</robotNamespace>
+  </plugin>
+</gazebo>
+
+<!-- transmissions，供 gazebo_ros_control 解析 -->
+<transmission name="base_yaw_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="base_yaw_joint">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="base_yaw_motor">
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<transmission name="head_pitch_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="head_pitch_joint">
+    <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="head_pitch_motor">
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+  <!-- Gazebo 外观材质（可选） -->
+  <gazebo reference="base_link"><material>Gazebo/Grey</material></gazebo>
+  <gazebo reference="yaw_link"><material>Gazebo/DarkGrey</material></gazebo>
+  <gazebo reference="pitch_link"><material>Gazebo/Grey</material></gazebo>
+<gazebo reference="spotlight_link">
+  <material>Gazebo/Grey</material>
+
+  <!-- 必须包含 name 属性 -->
+  <light name="spotlight_beam" type="spot">
+    <pose>0 0 0.3 0 0 0</pose>
+    <diffuse>1 1 1 1</diffuse>
+    <specular>0.3 0.3 0.3 1</specular>
+    <!-- 衰减参数需完整且合理 -->
+    <attenuation>
+      <range>30</range>
+      <constant>0.2</constant>
+      <linear>0.01</linear>
+      <quadratic>0.001</quadratic>
+    </attenuation>
+    <direction>0 0 1</direction>
+    <spot>
+      <inner_angle>0.2</inner_angle>
+      <outer_angle>0.7</outer_angle>
+      <falloff>0.7</falloff>
+    </spot>
+    <cast_shadows>true</cast_shadows>
+  </light>
+</gazebo>
+
+</robot>
+

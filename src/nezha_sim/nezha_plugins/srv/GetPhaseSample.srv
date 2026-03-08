@@ -1,0 +1,6 @@
+# Request is empty (plugin uses model pose + params)
+---
+float64 surface_z    # η(x,y)
+float64 z_over_l     # normalized immersion in [0,1]; 0=above, 1=fully submerged
+string  phase_name   # "ABOVE" | "WATER_ENTRY" | "WATER_EXIT" | "BELOW"
+

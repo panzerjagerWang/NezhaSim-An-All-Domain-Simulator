@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 首先定义宏 -->
+  <xacro:macro name="nezha_base" params="namespace *gazebo inertial_reference_frame">
+    <xacro:insert_block name="gazebo"/>
+    <gazebo>
+      <plugin filename="librotors_gazebo_multirotor_base_plugin.so" name="multirotor_base_plugin">
+        <robotNamespace>${namespace}</robotNamespace>
+        <linkName>${namespace}/base_link</linkName>
+        <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+  
+  <!-- 定义带水下功能的宏 -->
+  <xacro:macro name="nezha_with_underwater" params="namespace inertial_reference_frame debug:=false">
+    <xacro:nezha_base
+      namespace="${namespace}"
+      inertial_reference_frame="${inertial_reference_frame}">		
+      <gazebo>
+
+        <plugin name="nezha_underwater_plugin" filename="libnezha_underwater_plugin.so">
+          <fluid_density>1028.0</fluid_density>
+          <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+          <debug>${debug}</debug>
+          <water_surface_z>0.0</water_surface_z> 
+          <xacro:nezha_hydro_model namespace="${namespace}"/>
+        </plugin>
+      </gazebo>
+    </xacro:nezha_base>
+  </xacro:macro>
+
+</robot>

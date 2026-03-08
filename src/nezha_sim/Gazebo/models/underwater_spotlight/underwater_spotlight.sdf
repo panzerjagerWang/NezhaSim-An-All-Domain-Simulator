@@ -1,0 +1,153 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="underwater_spotlight_gimbal">
+    <static>true</static>
+    <pose>0 0 0 0 0 0</pose>
+
+    <!-- 底座 -->
+    <link name="base_link">
+      <pose>0 0 0 0 0 0</pose>
+      <visual name="base_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.3</radius>
+            <length>0.2</length>
+          </cylinder>
+        </geometry>
+        <pose>0 0 0.1 0 0 0</pose>
+        <material>
+          <ambient>0.2 0.2 0.2 1</ambient>
+          <diffuse>0.3 0.3 0.3 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+          <emissive>0 0 0 1</emissive>
+        </material>
+      </visual>
+    </link>
+
+    <!-- 方位环（yaw） -->
+    <link name="yaw_link">
+      <pose>0 0 0.2 0 0 0</pose>
+      <visual name="yaw_ring_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.28</radius>
+            <length>0.06</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <ambient>0.25 0.25 0.25 1</ambient>
+          <diffuse>0.4 0.4 0.4 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
+      </visual>
+    </link>
+
+    <!-- 俯仰架（pitch） -->
+    <link name="pitch_link">
+      <pose>0 0 0.26 0 0 0</pose>
+      <visual name="pitch_bar_visual">
+        <geometry>
+          <box>
+            <size>0.06 0.5 0.06</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.25 0.25 0.25 1</ambient>
+          <diffuse>0.5 0.5 0.5 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
+      </visual>
+    </link>
+
+    <!-- 探照灯主体 -->
+    <link name="spotlight_link">
+      <pose>0 0 0.26 0 0 0</pose>
+      <visual name="spotlight_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.2</radius>
+            <length>5.0</length>
+          </cylinder>
+        </geometry>
+        <pose>0 0 2.5 0 0 0</pose>
+        <material>
+          <ambient>0.8 0.8 0.8 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.9 0.9 0.9 1</specular>
+          <emissive>1 1 1 1</emissive>
+        </material>
+      </visual>
+
+      <light name="spotlight_light" type="spot">
+        <pose>0 0 0.3 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>0.3 0.3 0.3 1</specular>
+        <attenuation>
+          <range>30</range>
+          <constant>0.2</constant>
+          <linear>0.01</linear>
+          <quadratic>0.001</quadratic>
+        </attenuation>
+        <direction>0 0 1</direction>
+        <spot>
+          <inner_angle>0.2</inner_angle>
+          <outer_angle>0.7</outer_angle>
+          <falloff>0.7</falloff>
+        </spot>
+        <cast_shadows>true</cast_shadows>
+      </light>
+    </link>
+
+    <!-- 关节（纯姿态） -->
+    <joint name="base_to_yaw" type="revolute">
+      <parent>base_link</parent>
+      <child>yaw_link</child>
+      <pose>0 0 0.2 0 0 0</pose>
+      <axis>
+        <xyz>0 0 1</xyz>
+        <limit>
+          <lower>-3.14159</lower>
+          <upper>3.14159</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <joint name="yaw_to_pitch" type="revolute">
+      <parent>yaw_link</parent>
+      <child>pitch_link</child>
+      <pose>0 0 0.26 0 0 0</pose>
+      <axis>
+        <xyz>0 1 0</xyz>
+        <limit>
+          <lower>-1.2</lower>
+          <upper>1.2</upper>
+        </limit>
+      </axis>
+    </joint>
+
+    <joint name="pitch_to_spotlight" type="fixed">
+      <parent>pitch_link</parent>
+      <child>spotlight_link</child>
+    </joint>
+
+    <!-- 单一话题控制插件（示例插件名，需系统存在对应 .so） -->
+    <plugin name="spotlight_joint_cmd_mux" filename="libgazebo_ros_joint_cmd_mux.so">
+      <ros>
+        <namespace>/spotlight</namespace>
+        <!-- 订阅单一命令话题 -->
+        <argument>command_topic:=/spotlight/command</argument>
+      </ros>
+      <!-- 关节名与映射：linear.x -> yaw, linear.y -> pitch（单位：弧度） -->
+      <joints>base_to_yaw yaw_to_pitch</joints>
+      <mapping>twist_linear_xy_to_positions</mapping>
+      <rate>50</rate>
+      <!-- 限幅，防止越界 -->
+      <limits_lower>-3.14159 -1.2</limits_lower>
+      <limits_upper> 3.14159  1.2</limits_upper>
+    </plugin>
+
+  </model>
+</sdf>
+
+
+

@@ -1,0 +1,32 @@
+particle_system WaterSplash
+{
+    material nezha/WaterDrop
+    particle_width 0.05
+    particle_height 0.05
+    cull_each false
+
+    emitter Point
+    {
+        angle 30
+        emission_rate 30
+        time_to_live 0.5
+        direction 0 1 0
+        velocity 1.5
+        colour 0.8 0.9 1 0.7
+    }
+
+    affector LinearForce
+    {
+        force_vector 0 -9.8 0
+        force_application add
+    }
+
+    affector ColourFader
+    {
+        red -0.3
+        green -0.3
+        blue -0.3
+        alpha -1.0
+    }
+}
+

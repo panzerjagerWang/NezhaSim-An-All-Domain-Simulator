@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<robot name="rexrov" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+  <xacro:arg name="debug" default="0"/>
+  <xacro:arg name="mode" default="spotlight"/>
+  <xacro:arg name="namespace" default="rexrov"/>
+  <xacro:arg name="inertial_reference_frame" default="world"/>
+  
+  <!-- Include the ROV macro file -->
+  <xacro:include filename="$(find nezha_description)/$(arg namespace)_$(arg mode)/urdf/rexrov_base.xacro"/>
+  <xacro:include filename="$(find nezha_description)/$(arg namespace)_$(arg mode)/urdf/rexrov.gazebo.xacro"/>
+  
+  <!-- ✅ Include Nezha plugins -->
+  <xacro:include filename="$(find nezha_description)/$(arg namespace)_$(arg mode)/urdf/nezha_rexrov_plugins.xacro"/>
+
+  <!-- Create the rexrov -->
+  <xacro:rexrov_base
+    namespace="$(arg namespace)"
+    inertial_reference_frame="$(arg inertial_reference_frame)">
+    <!-- The underwater object plugin is given as an input block parameter to
+     allow the addition of external models of manipulator units -->
+    <gazebo>
+      <plugin name="uuv_plugin" filename="libnezha_underwater_plugin.so">
+        <fluid_density>1028.0</fluid_density>
+        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+        <debug>$(arg debug)</debug>
+        <!-- Adding the hydrodynamic and hydrostatic parameters for the vehicle-->
+        <xacro:rexrov_hydro_model namespace="$(arg namespace)"/>
+      </plugin>
+    </gazebo>
+  </xacro:rexrov_base>
+
+  
+  <!-- Joint state publisher plugin -->
+  <xacro:default_joint_state_publisher namespace="$(arg namespace)" update_rate="50"/>
+
+  <!-- ✅ 在这里应用 Nezha 插件 -->
+  <xacro:apply_nezha_plugins namespace="$(arg namespace)"/>
+
+</robot>
+

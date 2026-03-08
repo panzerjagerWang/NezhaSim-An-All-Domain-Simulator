@@ -1,0 +1,101 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+      The RexROV meshes and hydrodynamic parameters are based on the parameters and dimensions
+      from the SF 30k.
+
+      References:
+        [1] Dukan, Fredrik. "ROV Motion Control Systems." PhD Thesis, NTNU, 2014.
+        [2] Berg, Viktor. Development and Commissioning of a DP system for ROV SF 30k. MS
+            thesis. Institutt for marin teknikk, 2012.
+  -->
+  <!-- includes -->
+  <xacro:include filename="$(find uuv_descriptions)/urdf/common.urdf.xacro"/>
+  <xacro:include filename="$(find uuv_sensor_ros_plugins)/urdf/sensor_snippets.xacro"/>
+  <xacro:include filename="$(find uuv_gazebo_ros_plugins)/urdf/snippets.xacro"/>  
+  
+
+
+
+  <!-- Parameters -->
+  <xacro:property name="namespace" value="nezha_mini"/>
+
+  <!-- Mass, see p.28 in Berg2012 -->
+
+  <!--<xacro:macro name="nezha_base" params="namespace *gazebo inertial_reference_frame">
+
+    <link name="${namespace}/base_link">
+      <inertial>
+        <mass value="${mass}"/>
+        <origin xyz="0 0 0"/>
+        <inertia ixx="525.39" ixy="1.44" ixz="33.41" iyy="794.20" iyz="2.6" izz="691.23"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${visual_mesh_file}" scale="1 1 1"/>
+        </geometry>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 -0.75" rpy="0 0 0"/>
+        <geometry>
+          <box size="2.56 1.50 0.10"/>
+        </geometry>
+      </collision>
+      <collision>
+        <origin xyz="0 0 0.60" rpy="0 0 0"/>
+        <geometry><box size="2.56 1.50 0.40"/></geometry>
+      </collision>
+      <collision>
+        <origin xyz="-0.20 0.70 -0.15" rpy="0 0 0"/>
+        <geometry><box size="2.20 0.10 1.10"/></geometry>
+      </collision>
+      <collision>
+        <origin xyz="-0.20 -0.70 -0.15" rpy="0 0 0"/>
+        <geometry><box size="2.20 0.10 1.10"/></geometry>
+      </collision>
+
+    </link>
+
+
+    <xacro:insert_block name="gazebo"/>
+
+    <xacro:include filename="$(find uuv_descriptions)/urdf/rexrov_actuators.xacro"/>
+    <xacro:include filename="$(find uuv_descriptions)/urdf/rexrov_sensors.xacro"/>
+
+  </xacro:macro>-->
+  
+      <xacro:macro name="rexrov_hydro_model" params="namespace">
+        <link name="${namespace}/base_link">
+            <neutrally_buoyant>0</neutrally_buoyant>
+            <volume>${volume}</volume>
+            <box>
+                <width>1.5</width>
+                <length>2.6</length>
+                <height>1.6</height>
+            </box>
+            <center_of_buoyancy>${cob}</center_of_buoyancy>
+            <hydrodynamic_model>
+                <type>fossen</type>
+                <!-- Added mass: see p.28 in Berg2012 -->
+                <added_mass>
+                     779.79 -6.8773 -103.32  8.5426 -165.54 -7.8033
+                    -6.8773    1222   51.29  409.44 -5.8488  62.726
+                    -103.32   51.29  3659.9  6.1112 -386.42  10.774
+                     8.5426  409.44  6.1112   534.9 -10.027  21.019
+                    -165.54 -5.8488 -386.42 -10.027  842.69 -1.1162
+                    -7.8033  62.726  10.775  21.019 -1.1162  224.32
+                </added_mass>
+                <!-- Linear damping: see p.31 in Berg2012 -->
+                <linear_damping>
+                    -74.82 -69.48 -728.4 -268.8 -309.77 -105
+                </linear_damping>
+                <!-- Non-linear damping: see p.30 in Berg2012 -->
+                <quadratic_damping>
+                    -748.22 -992.53 -1821.01 -672 -774.44 -523.27
+                </quadratic_damping>
+            </hydrodynamic_model>
+        </link>
+    </xacro:macro>
+</robot>

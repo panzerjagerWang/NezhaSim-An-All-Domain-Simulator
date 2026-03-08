@@ -1,0 +1,451 @@
+<?xml version="1.0"?>
+<robot name="underwater_spotlight_gimbal_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:macro name="spotlight_gimbal" params="
+      parent_link
+      prefix:=''
+      ns:='/spotlight'
+      mount_xyz:='0 0 0'
+      mount_rpy:='0 0 0'
+      use_ignition:='false'
+      unique_id:=''">
+
+    <material name="${prefix}Grey"><color rgba="0.6 0.6 0.6 1.0"/></material>
+    <material name="${prefix}DarkGrey"><color rgba="0.3 0.3 0.3 1.0"/></material>
+    
+    <!-- 调整材质透明度和颜色 -->
+    <material name="${prefix}TransparentGlow"><color rgba="1.0 1.0 0.9 1.0"/></material>
+    <!-- 最后一段使用完全不透明的明亮材质 -->
+    <material name="${prefix}BrightGlow"><color rgba="1.0 1.0 0.9 1.0"/></material>
+
+    <link name="${prefix}base_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1.0"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.3" length="0.2"/></geometry>
+        <material name="${prefix}Grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.3" length="0.2"/></geometry>
+      </collision>
+    </link>
+
+    <joint name="${prefix}mount_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${prefix}base_link"/>
+      <origin xyz="${mount_xyz}" rpy="${mount_rpy}"/>
+    </joint>
+
+    <link name="${prefix}yaw_link">
+      <inertial>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <mass value="0.5"/>
+        <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.005"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.28" length="0.06"/></geometry>
+        <material name="${prefix}DarkGrey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.28" length="0.06"/></geometry>
+      </collision>
+    </link>
+
+    <link name="${prefix}pitch_link">
+      <inertial>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <mass value="0.3"/>
+        <inertia ixx="0.003" ixy="0" ixz="0" iyy="0.003" iyz="0" izz="0.003"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <geometry><box size="0.06 0.5 0.06"/></geometry>
+        <material name="${prefix}Grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <geometry><box size="0.06 0.5 0.06"/></geometry>
+      </collision>
+    </link>
+
+    <!-- 轻量化光束link - 30段，前29段半透明，最后1段不透明 -->
+    <link name="${prefix}beam_link">
+  <inertial>
+    <origin xyz="0 0 6.26" rpy="0 0 0"/>
+    <mass value="0.001"/>  <!-- 从0.05减小到0.001 -->
+    <inertia ixx="0.000001" ixy="0" ixz="0" 
+             iyy="0.000001" iyz="0" 
+             izz="0.000001"/>  <!-- 从0.0005减小到0.000001 -->
+  </inertial>
+      
+      <!-- 第1-23段使用半透明材质 -->
+      <visual>
+        <origin xyz="0 0 0.46" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.160" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 0.86" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.170" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 1.26" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.180" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 1.66" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.190" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 2.06" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.200" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 2.46" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.210" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 2.86" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.220" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 3.26" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.230" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 3.66" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.240" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 4.06" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.250" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 4.46" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.260" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 4.86" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.270" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 5.26" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.280" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 5.66" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.290" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 6.06" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.300" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 6.46" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.310" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 6.86" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.320" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 7.26" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.330" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 7.66" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.340" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 8.06" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.350" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 8.46" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.360" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 8.86" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.370" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 9.26" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.380" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <!-- 第24-29段使用半透明材质（修正原来的错误） -->
+      <visual>
+        <origin xyz="0 0 9.66" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.390" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 10.06" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.400" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 10.46" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.410" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 10.86" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.420" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 11.26" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.430" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+      
+      <visual>
+        <origin xyz="0 0 11.66" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.440" length="0.4"/></geometry>
+        <material name="${prefix}TransparentGlow"/>
+      </visual>
+     
+    </link>
+
+<link name="${prefix}beam_tip_link">
+  <inertial>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <mass value="0.0001"/>  <!-- 进一步减小 -->
+    <inertia ixx="0.0000001" ixy="0" ixz="0" 
+             iyy="0.0000001" iyz="0" 
+             izz="0.0000001"/>  <!-- 进一步减小 -->
+  </inertial>
+  
+  <!-- 第30段 - 不透明全白高亮材质 -->
+  <visual>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><cylinder radius="0.450" length="0.4"/></geometry>
+    <material name="inline_bright_white">
+      <color rgba="1.0 1.0 1.0 1.0"/>  <!-- 纯白色 -->
+    </material>
+  </visual>
+  
+  <collision>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+    <geometry><cylinder radius="0.450" length="0.4"/></geometry>
+  </collision>
+</link>
+
+<joint name="${prefix}beam_to_tip" type="fixed">
+  <parent link="${prefix}beam_link"/>
+  <child link="${prefix}beam_tip_link"/>
+  <origin xyz="0 0 12.06" rpy="0 0 0"/>
+</joint>
+
+<!-- 第30段专用设置 - 全白高亮不透明 -->
+<gazebo reference="${prefix}beam_tip_link">
+  <material>Gazebo/White</material>
+  <visual>
+    <transparency>0.0</transparency>  <!-- 完全不透明 -->
+    <material>
+      <ambient>1.0 1.0 1.0 1.0</ambient>   <!-- 纯白环境光 -->
+      <diffuse>1.0 1.0 1.0 1.0</diffuse>   <!-- 纯白漫反射 -->
+      <specular>1.0 1.0 1.0 1.0</specular> <!-- 纯白镜面反射 -->
+      <emissive>0.8 0.8 0.8 1.0</emissive> <!-- 纯白强发光效果 -->
+    </material>
+    <cast_shadows>true</cast_shadows>
+  </visual>
+</gazebo>
+<!-- beam_tip_link无碰撞设置 -->
+<gazebo reference="${prefix}beam_tip_link">
+  <material>Gazebo/White</material>
+  <collision>
+    <surface>
+      <contact>
+        <collide_without_contact>true</collide_without_contact>
+      </contact>
+    </surface>
+  </collision>
+  <!-- 其他visual设置保持不变 -->
+</gazebo>
+
+
+    <link name="${prefix}spotlight_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="0.001"/>
+        <inertia ixx="0.00001" ixy="0" ixz="0" iyy="0.00001" iyz="0" izz="0.00001"/>
+      </inertial>
+    </link>
+
+    <joint name="${prefix}pitch_to_beam" type="fixed">
+      <parent link="${prefix}pitch_link"/>
+      <child link="${prefix}beam_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <joint name="${prefix}pitch_to_spotlight" type="fixed">
+      <parent link="${prefix}pitch_link"/>
+      <child link="${prefix}spotlight_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+<!-- beam_link专用设置 - 全白高亮不透明 -->
+<gazebo reference="${prefix}beam_link">
+  <material>Gazebo/White</material>
+  <visual>
+    <transparency>0.0</transparency>  <!-- 完全不透明 -->
+    <material>
+      <ambient>1.0 1.0 1.0 1.0</ambient>   <!-- 纯白环境光 -->
+      <diffuse>1.0 1.0 1.0 1.0</diffuse>   <!-- 纯白漫反射 -->
+      <specular>1.0 1.0 1.0 1.0</specular> <!-- 纯白镜面反射 -->
+      <emissive>0.8 0.8 0.8 1.0</emissive> <!-- 纯白强发光效果 -->
+    </material>
+    <cast_shadows>true</cast_shadows>
+  </visual>
+</gazebo>
+
+
+    <!-- 聚光灯光源 -->
+    <gazebo reference="${prefix}spotlight_link">
+      <!-- 体积光锥 -->
+      <visual name="${prefix}beam_cone_helper">
+        <pose>0 0 0.35 0 0 0</pose>
+        <geometry>
+          <cone>
+            <radius>0.9</radius>
+            <length>4.0</length>
+          </cone>
+        </geometry>
+        <material>
+          <ambient>0.9 0.9 1.0 0.1</ambient>
+          <diffuse>0.9 0.9 1.0 0.1</diffuse>
+          <specular>0 0 0 1</specular>
+          <emissive>0.2 0.2 0.3 0.1</emissive>
+        </material>
+        <cast_shadows>false</cast_shadows>
+      </visual>
+
+      <light name="${prefix}spotlight_beam${unique_id}" type="spot">
+        <pose>0 0 0.35 0 0 0</pose>
+        <diffuse>1.5 1.5 1.4 1</diffuse>
+        <specular>0.8 0.8 0.7 1</specular>
+        <attenuation>
+          <range>150</range>
+          <constant>0.3</constant>
+          <linear>0.015</linear>
+          <quadratic>0.0005</quadratic>
+        </attenuation>
+        <direction>0 0 1</direction>
+        <spot>
+          <inner_angle>0.4</inner_angle>
+          <outer_angle>1.0</outer_angle>
+          <falloff>0.3</falloff>
+        </spot>
+        <cast_shadows>true</cast_shadows>
+      </light>
+    </gazebo>
+
+    <!-- joints -->
+    <joint name="${prefix}base_yaw_joint" type="revolute">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}yaw_link"/>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-3.14159" upper="3.14159" effort="10" velocity="2.0"/>
+      <dynamics damping="0.1" friction="0.0"/>
+    </joint>
+
+    <joint name="${prefix}head_pitch_joint" type="revolute">
+      <parent link="${prefix}yaw_link"/>
+      <child link="${prefix}pitch_link"/>
+      <origin xyz="0 0 0.06" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.2" upper="1.2" effort="10" velocity="2.0"/>
+      <dynamics damping="0.1" friction="0.0"/>
+    </joint>
+
+    <gazebo>
+      <plugin name="${prefix}gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>${ns}</robotNamespace>
+      </plugin>
+    </gazebo>
+
+    <transmission name="${prefix}base_yaw_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}base_yaw_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}base_yaw_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <transmission name="${prefix}head_pitch_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}head_pitch_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}head_pitch_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <gazebo reference="${prefix}base_link"><material>Gazebo/Grey</material></gazebo>
+    <gazebo reference="${prefix}yaw_link"><material>Gazebo/DarkGrey</material></gazebo>
+    <gazebo reference="${prefix}pitch_link"><material>Gazebo/Grey</material></gazebo>
+
+  </xacro:macro>
+</robot>
+

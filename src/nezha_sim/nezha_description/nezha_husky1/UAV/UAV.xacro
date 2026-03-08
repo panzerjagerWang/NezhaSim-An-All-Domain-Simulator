@@ -1,0 +1,206 @@
+<?xml version="1.0"?>
+<robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- Included URDF Files -->
+  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/component_snippets.xacro" />
+  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/UAV_plugin.xacro" />
+
+  <!-- 从 base.xacro 获取车体尺寸 -->
+  <xacro:property name="base_z_size" value="0.24750000" />
+  <xacro:property name="horizontal_arm_height" value="0.22" />  <!-- 10cm -->
+
+  <!-- 原有配置... -->
+  <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu" />
+  
+  <xacro:if value="$(arg enable_mavlink_interface)">
+    <xacro:default_mavlink_interface namespace="${namespace}" imu_sub_topic="imu" rotor_count="4" />
+  </xacro:if>
+
+  <xacro:default_imu namespace="${namespace}" parent_link="${namespace}/base_link" />
+
+  <xacro:if value="$(arg enable_ground_truth)">
+    <xacro:ground_truth_imu_and_odometry namespace="${namespace}" parent_link="${namespace}/base_link" />
+  </xacro:if>
+
+  <xacro:if value="$(arg enable_logging)">
+    <xacro:bag_plugin_macro
+      namespace="${namespace}"
+      bag_file="$(arg log_file)"
+      rotor_velocity_slowdown_sim="${rotor_velocity_slowdown_sim}"
+      wait_to_record_bag="$(arg wait_to_record_bag)" />
+  </xacro:if>
+
+  <!-- ========== 支架宏（从车体表面到旋翼）========== -->
+<!-- ========== 支架宏（带水平连接杆）========== -->
+<xacro:macro name="rotor_arm_visual" params="suffix x y">
+  <link name="${namespace}/arm_${suffix}_visual">
+    
+    <!-- 垂直支架杆 -->
+    <visual>
+      <!-- 改这里 ↓ 原来是 ${rotor_offset_top/2} -->
+      <origin xyz="0 0 ${(horizontal_arm_height + rotor_offset_top)/2}" rpy="0 0 0"/>
+      <geometry>
+        <!-- 改这里 ↓ 原来是 ${rotor_offset_top} -->
+        <cylinder radius="0.012" length="${rotor_offset_top - horizontal_arm_height}"/>
+      </geometry>
+      <material name="ArmGray">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    
+    <!-- 水平连接杆：使用参数控制高度 -->
+    <xacro:property name="distance_to_center" value="${sqrt(x*x + y*y)}"/>
+    <xacro:property name="angle_to_center" value="${atan2(y, x)}"/>
+    
+    <visual>
+      <origin xyz="${-x/2} ${-y/2} ${horizontal_arm_height}" rpy="0 ${pi/2} ${angle_to_center}"/>
+      <geometry>
+        <cylinder radius="0.015" length="${distance_to_center}"/>
+      </geometry>
+      <material name="ConnectGray">
+        <color rgba="0.3 0.3 0.3 1"/>
+      </material>
+    </visual>
+    
+    <!-- 底部连接节点：也要调整高度 -->
+    <visual>
+      <origin xyz="0 0 ${horizontal_arm_height}" rpy="0 0 0"/>
+      <geometry>
+        <sphere radius="0.025"/>
+      </geometry>
+      <material name="NodeGray">
+        <color rgba="0.4 0.4 0.4 1"/>
+      </material>
+    </visual>
+    
+  </link>
+  
+  <joint name="${namespace}/arm_${suffix}_visual_joint" type="fixed">
+    <origin xyz="${x} ${y} 0" rpy="0 0 0"/>
+    <parent link="${namespace}/base_link"/>
+    <child link="${namespace}/arm_${suffix}_visual"/>
+  </joint>
+</xacro:macro>
+
+
+  <xacro:rotor_arm_visual suffix="front_right" 
+                          x="${arm_length_front_x}" 
+                          y="-${arm_length_front_y}"/>
+  <xacro:vertical_rotor
+    robot_namespace="${namespace}"
+    suffix="front_right"
+    direction="ccw"
+    motor_constant="${motor_constant}"
+    moment_constant="${moment_constant}"
+    parent="${namespace}/base_link"
+    mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}"
+    time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}"
+    max_rot_velocity="${max_rot_velocity}"
+    motor_number="0"
+    rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Blue"
+    use_own_mesh="false"
+    mesh="">
+    <origin xyz="${arm_length_front_x} -${arm_length_front_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+  <!-- 后左 -->
+  <xacro:rotor_arm_visual suffix="back_left" 
+                          x="-${arm_length_back_x}" 
+                          y="${arm_length_back_y}"/>
+  <xacro:vertical_rotor
+    robot_namespace="${namespace}"
+    suffix="back_left"
+    direction="ccw"
+    motor_constant="${motor_constant}"
+    moment_constant="${moment_constant}"
+    parent="${namespace}/base_link"
+    mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}"
+    time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}"
+    max_rot_velocity="${max_rot_velocity}"
+    motor_number="1"
+    rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Red"
+    use_own_mesh="false"
+    mesh="">
+    <origin xyz="-${arm_length_back_x} ${arm_length_back_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+  <!-- 前左 -->
+  <xacro:rotor_arm_visual suffix="front_left" 
+                          x="${arm_length_front_x}" 
+                          y="${arm_length_front_y}"/>
+  <xacro:vertical_rotor 
+    robot_namespace="${namespace}"
+    suffix="front_left"
+    direction="cw"
+    motor_constant="${motor_constant}"
+    moment_constant="${moment_constant}"
+    parent="${namespace}/base_link"
+    mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}"
+    time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}"
+    max_rot_velocity="${max_rot_velocity}"
+    motor_number="2"
+    rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Blue"
+    use_own_mesh="false"
+    mesh="">
+    <origin xyz="${arm_length_front_x} ${arm_length_front_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+  <!-- 后右 -->
+  <xacro:rotor_arm_visual suffix="back_right" 
+                          x="-${arm_length_back_x}" 
+                          y="-${arm_length_back_y}"/>
+  <xacro:vertical_rotor 
+    robot_namespace="${namespace}"
+    suffix="back_right"
+    direction="cw"
+    motor_constant="${motor_constant}"
+    moment_constant="${moment_constant}"
+    parent="${namespace}/base_link"
+    mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}"
+    time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}"
+    max_rot_velocity="${max_rot_velocity}"
+    motor_number="3"
+    rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Red"
+    use_own_mesh="false"
+    mesh="">
+    <origin xyz="-${arm_length_back_x} -${arm_length_back_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+  <xacro:camera_macro
+    namespace="${namespace}"
+    parent_link="${namespace}/base_link"
+    camera_suffix=""
+    frame_rate="30"
+    horizontal_fov="2"
+    image_width="752"
+    image_height="480"
+    image_format="L8"
+    min_distance="0.02"
+    max_distance="50"
+    noise_mean="0.0"
+    noise_stddev="0.007"
+    enable_visual="true">
+    <box size="0.02 0.05 0.05" />
+    <origin xyz="0 0 -0.051" rpy="0 0 0" />
+  </xacro:camera_macro>
+</robot>
+
+

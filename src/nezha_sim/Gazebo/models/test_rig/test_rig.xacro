@@ -1,0 +1,250 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="prop_test_rig">
+
+  <!-- =========================
+       可调参数
+  ========================== -->
+  <xacro:property name="stand_height"   value="1.2"/>     <!-- 立柱高 -->
+  <xacro:property name="base_size_xy"   value="0.5"/>     <!-- 底座方形边长 -->
+  <xacro:property name="base_thick"     value="0.08"/>
+  <xacro:property name="stand_radius"   value="0.05"/>    <!-- 立柱半径 -->
+  <xacro:property name="rod_length"     value="0.6"/>     <!-- 测试杆长度 -->
+  <xacro:property name="rod_radius"     value="0.015"/>   <!-- 测试杆半径 -->
+  <xacro:property name="mount_radius"   value="0.08"/>    <!-- 挂载盘半径 -->
+  <xacro:property name="mount_thick"    value="0.012"/>   <!-- 挂载盘厚度 -->
+
+  <!-- 运动范围（沿Z）与默认初始位姿 -->
+  <xacro:property name="rod_z_min" value="-0.4"/>
+  <xacro:property name="rod_z_max" value="0.4"/>
+  <xacro:property name="rod_z_0"   value="0.0"/>
+
+  <!-- 简易材料与惯性工具 -->
+  <xacro:macro name="inertial_box" params="mass x y z">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass*(y*y+z*z)/12.0}"
+               iyy="${mass*(x*x+z*z)/12.0}"
+               izz="${mass*(x*x+y*y)/12.0}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <xacro:macro name="inertial_cyl" params="mass r h">
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia ixx="${mass*(3*r*r+h*h)/12.0}"
+               iyy="${mass*(3*r*r+h*h)/12.0}"
+               izz="${mass*(r*r)/2.0}"
+               ixy="0" ixz="0" iyz="0"/>
+    </inertial>
+  </xacro:macro>
+
+  <!-- =========================
+       Gazebo 全局设置
+       将模型设为静态：底座固定在地面
+  ========================== -->
+
+  <!-- 载入 ros_control 以便速度控制棱柱关节 -->
+  <gazebo>
+    <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so"/>
+  </gazebo>
+
+  <!-- =========================
+       底座（放在地面上）
+  ========================== -->
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 ${base_thick/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_size_xy} ${base_size_xy} ${base_thick}"/>
+      </geometry>
+      <material name="Gray">
+        <color rgba="0.5 0.5 0.5 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${base_thick/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <box size="${base_size_xy} ${base_size_xy} ${base_thick}"/>
+      </geometry>
+    </collision>
+    <xacro:inertial_box mass="15.0" x="${base_size_xy}" y="${base_size_xy}" z="${base_thick}"/>
+  </link>
+
+  <!-- 立柱（固定于底座） -->
+  <link name="stand_link">
+    <visual>
+      <origin xyz="0 0 ${base_thick + stand_height/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${stand_radius}" length="${stand_height}"/>
+      </geometry>
+      <material name="Dark">
+        <color rgba="0.2 0.2 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${base_thick + stand_height/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${stand_radius}" length="${stand_height}"/>
+      </geometry>
+    </collision>
+    <xacro:inertial_cyl mass="5.0" r="${stand_radius}" h="${stand_height}"/>
+  </link>
+
+  <joint name="base_to_stand" type="fixed">
+    <parent link="base_link"/>
+    <child  link="stand_link"/>
+  </joint>
+
+  <!-- =========================
+       竖直滑块（Z向棱柱关节）
+  ========================== -->
+  <link name="slider_link">
+    <!-- 可视化一个小套筒，便于观察 -->
+    <visual>
+      <origin xyz="0 0 ${base_thick + 0.1}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${stand_radius*1.2}" length="0.08"/>
+      </geometry>
+      <material name="Blue">
+        <color rgba="0.1 0.4 0.8 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${base_thick + 0.1}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${stand_radius*1.2}" length="0.08"/>
+      </geometry>
+    </collision>
+    <xacro:inertial_cyl mass="1.0" r="${stand_radius*1.2}" h="0.08"/>
+  </link>
+
+  <joint name="rod_slide" type="prismatic">
+    <parent link="stand_link"/>
+    <child  link="slider_link"/>
+    <!-- 关节坐标系放在立柱顶部附近，轴向 +Z -->
+    <origin xyz="0 0 ${base_thick + stand_height - 0.04}" rpy="0 0 0"/>
+    <axis xyz="0 0 1"/>
+    <limit lower="${rod_z_min}" upper="${rod_z_max}" effort="500" velocity="1.0"/>
+    <dynamics damping="5.0" friction="0.1"/>
+  </joint>
+
+  <!-- =========================
+       测试杆（与滑块刚性连接）
+  ========================== -->
+  <link name="rod_link">
+    <visual>
+      <origin xyz="0 0 ${-rod_length/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${rod_radius}" length="${rod_length}"/>
+      </geometry>
+      <material name="Orange">
+        <color rgba="0.95 0.5 0.2 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${-rod_length/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${rod_radius}" length="${rod_length}"/>
+      </geometry>
+    </collision>
+    <xacro:inertial_cyl mass="0.5" r="${rod_radius}" h="${rod_length}"/>
+  </link>
+
+  <joint name="slider_to_rod" type="fixed">
+    <parent link="slider_link"/>
+    <!-- 将杆的上端与滑块对齐，使杆向下延伸 -->
+    <child  link="rod_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       挂载盘（在杆底端），用于安装桨叶/机体
+  ========================== -->
+  <link name="mount_link">
+    <visual>
+      <origin xyz="0 0 ${-rod_length - mount_thick/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${mount_radius}" length="${mount_thick}"/>
+      </geometry>
+      <material name="Green">
+        <color rgba="0.2 0.7 0.3 1"/>
+      </material>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${-rod_length - mount_thick/2.0}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${mount_radius}" length="${mount_thick}"/>
+      </geometry>
+    </collision>
+    <xacro:inertial_cyl mass="0.4" r="${mount_radius}" h="${mount_thick}"/>
+  </link>
+
+  <joint name="rod_to_mount" type="fixed">
+    <parent link="rod_link"/>
+    <child  link="mount_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- =========================
+       ros_control 传动（速度接口）
+       你可以启一个 VelocityJointController 来设定杆的恒速
+  ========================== -->
+  <transmission name="rod_slide_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="rod_slide">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="rod_actuator">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      <mechanicalReduction>1.0</mechanicalReduction>
+    </actuator>
+  </transmission>
+<!-- 放在文件末尾, </robot> 之前 -->
+<!-- 冻结底座，但整机仍是动态模型 -->
+<!-- === 1. 定义一个关闭重力的宏 === -->
+<xacro:macro name="no_gravity" params="ln">
+  <gazebo reference="${ln}">
+    <gravity>false</gravity>
+  </gazebo>
+</xacro:macro>
+
+<!-- === 2. 对 rig 里所有 link 调用一次 === -->
+<xacro:no_gravity ln="base_link"/>
+<xacro:no_gravity ln="stand_link"/>
+<xacro:no_gravity ln="slider_link"/>
+<xacro:no_gravity ln="rod_link"/>
+<xacro:no_gravity ln="mount_link"/>
+
+
+  <!-- =========================
+       （可选）在此处挂你的流体/波浪等插件
+       示例：将插件挂在模型上或 mount_link 上读取力、阻力、相位等
+       使用前请根据你的 .so 名称调整 filename
+  ========================== -->
+
+  <!-- 挂在整个模型（推荐） -->
+  <!--
+  <gazebo>
+    <plugin name="hydro" filename="libHydrodynamicsPlugin.so">
+      <param name="target_link">mount_link</param>
+      <param name="phase_source">WaveProbePlugin</param>
+      ...
+    </plugin>
+  </gazebo>
+  -->
+
+  <!-- 或者仅挂在挂载盘上 -->
+  <!--
+  <gazebo reference="mount_link">
+    <plugin name="underwater_obj" filename="libUnderwaterObjectPlugin.so">
+      <param name="enable_logging">true</param>
+      ...
+    </plugin>
+  </gazebo>
+  -->
+
+</robot>
+

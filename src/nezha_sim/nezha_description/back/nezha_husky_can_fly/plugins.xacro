@@ -1,0 +1,500 @@
+<?xml version="1.0"?>
+<!--
+  ============================================================
+  Nezha Plugins Collection
+  ============================================================
+  
+  This file contains all Gazebo plugin macros for the Nezha
+  amphibious robot system.
+  
+  Plugin Categories:
+  1. Environment Detection (Terrain, Wave)
+  2. Dynamics (Hydrodynamics, Underwater)
+  3. Control (Phase Switch, Wheel Efficiency)
+  4. State Publishing (Robot State)
+  
+  Author: Nezha Team
+  Version: 2.0
+  ============================================================
+-->
+
+<robot name="nezha_plugins" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================================================ -->
+  <!-- Global Properties & Arguments                                 -->
+  <!-- ============================================================ -->
+  
+  <xacro:arg name="debug" default="false"/>
+  <xacro:arg name="mode" default="_husky"/>
+  <xacro:arg name="namespace" default="nezha_husky"/>
+  <xacro:arg name="inertial_reference_frame" default="world"/>
+  
+  <!-- Physical Properties -->
+  <xacro:property name="namespace" value="$(arg namespace)"/>
+  <xacro:property name="volume" value="0.08"/>
+  <xacro:property name="cob" value="0.0 0.0 0.0"/>
+  <xacro:property name="buoyancy_scale" value="1.0"/>
+  <xacro:property name="force_scale_factor" value="1.0"/>
+  
+  <!-- Inertia Properties -->
+  <xacro:property name="body_inertia">
+    <inertia ixx="0.0347563" ixy="0.0" ixz="0.0" 
+             iyy="0.0458929" iyz="0.0" izz="0.0977"/>
+  </xacro:property>
+  
+  <xacro:property name="rotor_inertia">
+    <xacro:box_inertia x="${radius_rotor}" y="0.015" z="0.003" 
+                       mass="${mass_rotor*rotor_velocity_slowdown_sim}"/>
+  </xacro:property>
+
+
+  <!-- ============================================================ -->
+  <!-- 1️⃣ ENVIRONMENT DETECTION PLUGINS                            -->
+  <!-- ============================================================ -->
+
+  <!-- ========================================
+       Terrain Detector Plugin
+       - Detects terrain type (land/water/air)
+       - Publishes terrain status messages
+       ======================================== -->
+  <xacro:macro name="terrain_detector_macro" 
+               params="robot_namespace 
+                       link_name:=base_link 
+                       update_rate:=1.0 
+                       topic_name:=terrain_status
+                       extra_keywords:=''">
+    <gazebo>
+      <plugin name="terrain_detector_${robot_namespace}" 
+              filename="libnezha_terrain_detector_plugin.so">
+        
+        <!-- Basic Configuration -->
+        <robotNamespace>${robot_namespace}</robotNamespace>
+        <linkName>${link_name}</linkName>
+        <updateRate>${update_rate}</updateRate>
+        <terrainPubTopic>${topic_name}</terrainPubTopic>
+        
+        <!-- Water Detection (Optional) -->
+        <xacro:if value="${extra_keywords != ''}">
+          <waterKeywords>${extra_keywords}</waterKeywords>
+          <waterSurfaceLevel>0.0</waterSurfaceLevel>
+          <surfaceTolerance>0.2</surfaceTolerance>
+          <ktIgeGainPubTopic>kt_ige_gain</ktIgeGainPubTopic>
+          <kqIgeGainPubTopic>kq_ige_gain</kqIgeGainPubTopic>
+        </xacro:if>
+        
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ========================================
+       Wave Probe Plugin
+       - Measures wave height and phase
+       - Provides real-time wave information
+       ======================================== -->
+  <xacro:macro name="wave_probe_plugin" params="
+    plugin_name:=wave_probe
+    namespace:=''
+    L:=1.0
+    z_offset:=0.0
+    bound_link:=base_link
+    wavefield_name:=nezha_ocean_waves">
+    
+    <gazebo>
+      <plugin name="${plugin_name}" 
+              filename="libnezha_wave_probe_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <L>${L}</L>
+        <zTopOffset>${z_offset}</zTopOffset>
+        <boundName>${bound_link}</boundName>
+        <wavefieldCandidate>${wavefield_name}</wavefieldCandidate>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+
+  <!-- ============================================================ -->
+  <!-- 2️⃣ DYNAMICS PLUGINS                                         -->
+  <!-- ============================================================ -->
+
+  <!-- ========================================
+       Hydrodynamics Plugin (Surface)
+       - Surface wave forces
+       - Buoyancy and drag
+       - Controlled by Phase Switch
+       ======================================== -->
+  <xacro:macro name="hydrodynamics_plugin" 
+               params="wave_model:='nezha_ocean_waves'
+                       debug:=false
+                       robot_volume:=${volume}
+                       buoyancy_scale:=1.0
+                       force_scale_factor:=1.0
+                       water_patch_length:=5.0
+                       water_patch_width:=5.0">
+    <gazebo>
+      <plugin name="hydrodynamics" 
+              filename="libnezha_surface_plugin.so">
+
+        <!-- Wave Model -->
+        <wave_model>${wave_model}</wave_model>
+
+        <!-- Critical Parameters (Locked at Load) -->
+        <robot_volume>${robot_volume}</robot_volume>
+        <buoyancy_scale>${buoyancy_scale}</buoyancy_scale>
+        <force_scale_factor>${force_scale_factor}</force_scale_factor>
+
+        <!-- Water Patch Configuration -->
+        <length>${water_patch_length}</length>
+        <width>${water_patch_width}</width>
+
+        <!-- Force Switches -->
+        <damping_on>true</damping_on>
+        <viscous_drag_on>true</viscous_drag_on>
+        <pressure_drag_on>true</pressure_drag_on>
+
+        <!-- Visualization Markers -->
+        <markers>
+          <update_rate>30.0</update_rate>
+          <water_patch>false</water_patch>
+          <waterline>false</waterline>
+          <underwater_surface>false</underwater_surface>
+        </markers>
+
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ========================================
+       Underwater Dynamics Model (Fossen)
+       - Added mass and damping
+       - Hydrodynamic coefficients
+       ======================================== -->
+  <xacro:macro name="nezha_underwater_model" params="namespace">
+    <link name="${namespace}/base_link">
+      
+      <!-- Buoyancy Configuration -->
+      <neutrally_buoyant>0</neutrally_buoyant>
+      <volume>${volume}</volume>
+      <box>
+        <width>0.05</width>
+        <length>0.15</length>
+        <height>0.11</height>
+      </box>
+      <center_of_buoyancy>${cob}</center_of_buoyancy>
+      
+      <!-- Hydrodynamic Model -->
+      <hydrodynamic_model>
+        <type>fossen</type>
+        
+        <!-- Added Mass Matrix (6x6) -->
+        <added_mass>
+          -0.29 0    0    0       0       0
+          0    -0.29 0    0       0       0
+          0     0   -0.49 0       0       0
+          0     0    0   -0.0005  0       0
+          0     0    0    0      -0.0011  0
+          0     0    0    0       0      -0.0023
+        </added_mass>
+        
+        <!-- Linear Damping (6 DOF) -->
+        <linear_damping>
+          -2.0 -2.0 -5.0 -0.005 -0.01 -0.065
+        </linear_damping>
+        
+        <!-- Quadratic Damping (6 DOF) -->
+        <quadratic_damping>
+          -4.0 -4.0 -8.0 -0.02 -0.04 -0.1
+        </quadratic_damping>
+        
+        <!-- Force Limits -->
+        <max_force>1e2</max_force>
+        <max_torque>1e2</max_torque>
+        
+      </hydrodynamic_model>
+    </link>
+  </xacro:macro>
+
+  <!-- ========================================
+       Complete UAV/UUV Model
+       - Base link with inertia
+       - Visual and collision geometry
+       - Multirotor and underwater plugins
+       ======================================== -->
+  <xacro:macro name="nezha_UAV_UUV_complete" 
+               params="namespace mass body_width body_height use_mesh_file mesh_file 
+                       inertial_reference_frame debug *body_inertia">
+    
+    <!-- Base Link -->
+    <link name="${namespace}/base_link"/>
+
+    <!-- Base Joint (Fixed) -->
+    <joint name="${namespace}/base_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/base_link_inertia"/>
+    </joint>
+
+    <!-- Inertial Link -->
+    <link name="${namespace}/base_link_inertia">
+      
+      <!-- Inertia Properties -->
+      <inertial>
+        <mass value="${mass}"/>
+        <origin xyz="0 0 0"/>
+        <xacro:insert_block name="body_inertia"/>
+      </inertial>
+
+      <!-- Visual Geometry -->
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <xacro:if value="${use_mesh_file}">
+            <mesh filename="${mesh_file}" scale="1 1 1"/>
+          </xacro:if>
+          <xacro:unless value="${use_mesh_file}">
+            <box size="${body_width} ${body_width} ${body_height}"/>
+          </xacro:unless>
+        </geometry>
+      </visual>
+      
+      <!-- Collision Geometry -->
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="${body_width} ${body_width} ${body_height}"/>
+        </geometry>
+      </collision>
+      
+    </link>
+    
+    <!-- Multirotor Base Plugin -->
+    <gazebo>
+      <plugin filename="librotors_gazebo_multirotor_base_plugin.so" 
+              name="multirotor_base_plugin">
+        <robotNamespace>${namespace}</robotNamespace>
+        <linkName>${namespace}/base_link</linkName>
+        <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
+      </plugin>
+    </gazebo>
+    
+    <!-- Underwater Plugin -->
+    <gazebo>
+      <plugin name="nezha_underwater_plugin" 
+              filename="libnezha_underwater_plugin.so">
+        <fluid_density>1028.0</fluid_density>
+        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+        <debug>${debug}</debug>
+        <xacro:nezha_underwater_model namespace="${namespace}"/>
+      </plugin>
+    </gazebo>
+    
+  </xacro:macro>
+
+
+  <!-- ============================================================ -->
+  <!-- 3️⃣ CONTROL PLUGINS                                          -->
+  <!-- ============================================================ -->
+
+  <!-- ========================================
+       Phase Switch Plugin
+       - Switches between surface/underwater dynamics
+       - Monitors wave probe for phase detection
+       - Controls plugin activation
+       ======================================== -->
+  <xacro:macro name="phase_switch_plugin" params="
+    namespace:=rexrov
+    target_link:=base_link
+    update_rate:=50.0
+    transition_frames:=5
+    surface_plugin_name:=hydrodynamics
+    underwater_plugin_name:=uuv_plugin
+    surface_plugin_file:=libnezha_surface_plugin.so
+    underwater_plugin_file:=libnezha_underwater_plugin.so">
+    
+    <gazebo>
+      <plugin name="phase_switch_plugin" 
+              filename="libnezha_phase_switch_plugin.so">
+
+        <!-- Robot Configuration -->
+        <robot_namespace>${namespace}</robot_namespace>
+        <target_link>${target_link}</target_link>
+
+        <!-- Update Settings -->
+        <update_rate>${update_rate}</update_rate>
+        <transition_frames>${transition_frames}</transition_frames>
+        
+        <!-- Plugin Names -->
+        <surface_plugin_name>${surface_plugin_name}</surface_plugin_name>
+        <underwater_plugin_name>${underwater_plugin_name}</underwater_plugin_name>
+        
+        <!-- Plugin Files -->
+        <surface_plugin_file>${surface_plugin_file}</surface_plugin_file>
+        <underwater_plugin_file>${underwater_plugin_file}</underwater_plugin_file>
+
+      </plugin>
+    </gazebo>
+    
+  </xacro:macro>
+
+  <!-- ========================================
+       Wheel Efficiency Plugin
+       - Adjusts wheel friction based on terrain
+       - Supports land/water/airborne modes
+       - Smooth transitions between states
+       ======================================== -->
+  <xacro:macro name="nezha_wheel_efficiency_plugin" params="
+    namespace:=nezha_husky
+    terrain_topic:=terrain_status
+    status_topic:=wheel_efficiency_status
+    update_rate:=50
+    debug_mode:=true
+    use_ground_contact:=true
+    ground_threshold:=0.15
+    control_mode:=combined
+    normal_mu1:=1.0
+    normal_mu2:=1.0
+    water_mu1:=0.02
+    water_mu2:=0.02
+    water_slip1:=2.0
+    water_slip2:=2.0
+    water_linear_damping:=0.9
+    water_angular_damping:=0.9
+    water_resistance:=80.0
+    airborne_mu1:=0.0
+    airborne_mu2:=0.0
+    airborne_slip1:=5.0
+    smooth_transition:=false
+    transition_duration:=0.5">
+
+    <gazebo>
+      <plugin name="wheel_efficiency_controller" 
+              filename="libnezha_wheel_efficiency_plugin.so">
+        
+        <!-- Basic Configuration -->
+        <robotNamespace>${namespace}</robotNamespace>
+        <terrainTopic>${terrain_topic}</terrainTopic>
+        <statusTopic>${status_topic}</statusTopic>
+        <updateRate>${update_rate}</updateRate>
+        <debugMode>${debug_mode}</debugMode>
+        
+        <!-- Ground Contact Detection -->
+        <useGroundContactCheck>${use_ground_contact}</useGroundContactCheck>
+        <groundContactThreshold>${ground_threshold}</groundContactThreshold>
+        
+        <!-- Control Mode: friction, damping, combined -->
+        <controlMode>${control_mode}</controlMode>
+        
+        <!-- Normal Efficiency (Land Grounded) -->
+        <normalFrictionMu1>${normal_mu1}</normalFrictionMu1>
+        <normalFrictionMu2>${normal_mu2}</normalFrictionMu2>
+        
+        <!-- Water Efficiency -->
+        <waterFrictionMu1>${water_mu1}</waterFrictionMu1>
+        <waterFrictionMu2>${water_mu2}</waterFrictionMu2>
+        <waterSlip1>${water_slip1}</waterSlip1>
+        <waterSlip2>${water_slip2}</waterSlip2>
+        <waterLinearDamping>${water_linear_damping}</waterLinearDamping>
+        <waterAngularDamping>${water_angular_damping}</waterAngularDamping>
+        <waterResistanceForce>${water_resistance}</waterResistanceForce>
+        
+        <!-- Airborne Efficiency -->
+        <airborneFrictionMu1>${airborne_mu1}</airborneFrictionMu1>
+        <airborneFrictionMu2>${airborne_mu2}</airborneFrictionMu2>
+        <airborneSlip1>${airborne_slip1}</airborneSlip1>
+        
+        <!-- Smooth Transition -->
+        <enableSmoothTransition>${smooth_transition}</enableSmoothTransition>
+        <transitionDuration>${transition_duration}</transitionDuration>
+        
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+
+  <!-- Wheel Efficiency Preset: Default -->
+  <xacro:macro name="nezha_wheel_efficiency_default" params="namespace:=nezha_husky">
+    <xacro:nezha_wheel_efficiency_plugin namespace="${namespace}"/>
+  </xacro:macro>
+
+
+  <!-- ============================================================ -->
+  <!-- 4️⃣ STATE PUBLISHING PLUGINS                                 -->
+  <!-- ============================================================ -->
+
+  <!-- ========================================
+       Robot State Plugin
+       - Publishes robot pose and velocity
+       - Provides odometry information
+       ======================================== -->
+  <xacro:macro name="RobotStatePlugin" params="model_namespace">
+    <gazebo>
+      <plugin name="RobotStatePlugin" 
+              filename="libnezha_robot_state_plugin.so">
+        <namespace>${model_namespace}</namespace>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+
+  <!-- ============================================================ -->
+  <!-- 5️⃣ UNIFIED PLUGIN APPLICATION                               -->
+  <!-- ============================================================ -->
+
+  <!-- ========================================
+       Apply All Nezha Plugins
+       - One-stop macro for complete plugin setup
+       - Includes all necessary plugins
+       - Properly configured dependencies
+       ======================================== -->
+  <xacro:macro name="apply_nezha_plugins" params="
+    namespace
+    target_link:=base_link
+    wave_model:=nezha_ocean_waves
+    debug:=false">
+    
+    <!-- 1. Surface Hydrodynamics (Controlled by Phase Switch) -->
+    <xacro:hydrodynamics_plugin 
+      wave_model="${wave_model}"
+      debug="${debug}"
+      robot_volume="${volume}"
+      buoyancy_scale="${buoyancy_scale}"
+      force_scale_factor="${force_scale_factor}"
+      water_patch_length="1.0"
+      water_patch_width="1.0"/>
+    
+    <!-- 2. Underwater Dynamics (Fossen Model) -->
+    <!-- Note: Defined in main URDF as "uuv_plugin" -->
+    
+    <!-- 3. Phase Switch Controller -->
+    <xacro:phase_switch_plugin
+      namespace="${namespace}"
+      target_link="${target_link}"
+      update_rate="50.0"
+      transition_frames="5"
+      surface_plugin_name="hydrodynamics"
+      underwater_plugin_name="uuv_plugin"
+      surface_plugin_file="libnezha_surface_plugin.so"
+      underwater_plugin_file="libnezha_underwater_plugin.so"/>
+    
+    <!-- 4. Wave Probe (Phase Detection) -->
+    <xacro:wave_probe_plugin 
+      plugin_name="usv_wave_probe"
+      namespace="${namespace}"
+      L="2.5"
+      z_offset="0.1"
+      bound_link="${namespace}/${target_link}"
+      wavefield_name="${wave_model}::wavefield_entity"/>
+    
+    <!-- 5. Robot State Publisher -->
+    <xacro:RobotStatePlugin model_namespace="${namespace}"/>
+    
+    <!-- 6. Terrain Detector -->
+    <xacro:terrain_detector_macro 
+      robot_namespace="${namespace}" 
+      link_name="${namespace}/base_link"
+      update_rate="2.0"
+      extra_keywords="puddle,basin,aquarium"/>
+    
+  </xacro:macro>
+
+</robot>
+

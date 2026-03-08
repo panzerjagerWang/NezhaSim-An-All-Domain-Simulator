@@ -1,0 +1,17 @@
+spotlight:
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50
+
+  base_yaw_position:
+    type: effort_controllers/JointPositionController
+    joint: base_yaw_joint
+    pid: {p: 8.0, i: 0.0, d: 0.2}
+
+  head_pitch_position:
+    type: effort_controllers/JointPositionController
+    joint: head_pitch_joint
+    pid: {p: 6.0, i: 0.0, d: 0.1}
+
+
+

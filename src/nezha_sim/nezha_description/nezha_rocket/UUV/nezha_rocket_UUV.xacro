@@ -1,0 +1,121 @@
+<?xml version="1.0"?>
+<robot name="nezha_rocket" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+<!-- 1. 定义 / 传入参数 -->
+<xacro:property name="radius_paddle" value="0.5" /> <!-- [m] -->
+<xacro:property name="paddle_offset_top" value="-0.05" /> <!-- [m] -->
+<xacro:property name="mass_paddle" value="0.003489395251" /> <!-- [kg] -->
+<xacro:property name="paddle_number" value="4" /> <!-- [kg] -->
+
+  <xacro:property name="namespace" value="$(arg namespace)" />
+  <xacro:property name="rotor_velocity_slowdown_sim" value="10" />
+  <xacro:property name="use_mesh_file" value="true" />
+  <xacro:property name="mesh_file" value="package://nezha_description/$(arg namespace)/meshes/$(arg namespace).STL" />
+  <xacro:property name="mass" value="0.95" /> <!-- [kg] -->
+  <xacro:property name="body_width" value="0.47" /> <!-- [m] -->
+  <xacro:property name="body_height" value="0.11" /> <!-- [m] -->
+  <xacro:property name="mass_rotor" value="0.005" /> <!-- [kg] -->
+  <xacro:property name="arm_length_front_x" value="0.13" /> <!-- [m] -->
+  <xacro:property name="arm_length_back_x" value="0.13" /> <!-- [m] -->
+  <xacro:property name="arm_length_front_y" value="0.22" /> <!-- [m] -->
+  <xacro:property name="arm_length_back_y" value="0.2" /> <!-- [m] -->
+  <!--<xacro:property name="rotor_offset_top" value="0.023" />  [m] -->
+  <xacro:property name="rotor_offset_top" value="-0.03" /> <!-- [m] -->
+  <xacro:property name="arm_length_front_x" value="0.045" /> <!-- [m] -->
+<xacro:property name="arm_length_back_x" value="0.045" /> <!-- [m] -->
+<xacro:property name="arm_length_front_y" value="0.045" /> <!-- [m] -->
+<xacro:property name="arm_length_back_y" value="0.045" /> <!-- [m] -->
+<xacro:property name="rotor_r" value="0" /> <!-- [m] -->
+<xacro:property name="rotor_p" value="0" /> <!-- [m] -->
+<xacro:property name="rotor_y" value="0" /> <!-- [m] -->
+  <xacro:arg name="debug" default="0"/>
+
+  <xacro:property name="scale_rotor" value="0.03" /> <!-- [m] -->
+  <xacro:property name="radius_rotor" value="0.01" /> <!-- [m] -->
+  
+  
+  <xacro:property name="motor_constant" value="8.54858e-06" /> <!-- [kg.m/s^2] -->
+  <xacro:property name="moment_constant" value="0.016" /> <!-- [m] -->
+  <xacro:property name="time_constant_up" value="0.0125" /> <!-- [s] -->
+  <xacro:property name="time_constant_down" value="0.025" /> <!-- [s] -->
+  <xacro:property name="max_rot_velocity" value="838" /> <!-- [rad/s] -->
+  <xacro:property name="sin30" value="0.5" />
+  <xacro:property name="cos30" value="0.866025403784" />
+  <xacro:property name="sqrt2" value="1.4142135623730951" />
+  <xacro:property name="rotor_drag_coefficient" value="8.06428e-05" />
+  <xacro:property name="rolling_moment_coefficient" value="0.000001" />
+  <xacro:arg name="debug" default="0"/>
+<xacro:include filename="$(find nezha_description)/$(arg namespace)/UUV/thruster_snippets.xacro"/>
+<xacro:include filename="$(find nezha_description)/$(arg namespace)/UUV/rexrov_base.xacro"/>
+<xacro:include filename="$(find nezha_description)/$(arg namespace)/UUV/nezha_underwater_hydrodynamics.xacro"/>
+<xacro:property name="prop_mesh_file" value="file://$(find nezha_description)/$(arg namespace)/meshes/paddle_1_link.STL"/>
+  <xacro:arg name="inertial_reference_frame" default="world"/>
+    <xacro:property name="blade_type" value="thin" /> <!-- [m] -->
+  <!-- Property Blocks -->
+  <xacro:property name="body_inertia">
+    <inertia ixx="0.0347563" ixy="0.0" ixz="0.0" iyy="0.0458929" iyz="0.0" izz="0.0977" /> <!-- [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] [kg.m^2] -->
+  </xacro:property>
+
+  <!-- inertia of a single rotor, assuming it is a cuboid. Height=3mm, width=15mm -->
+  <xacro:property name="rotor_inertia">
+    <xacro:box_inertia x="${radius_rotor}" y="0.015" z="0.003" mass="${mass_rotor*rotor_velocity_slowdown_sim}" />
+  </xacro:property>
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="0"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}">
+    <origin xyz="0 -${arm_length_front_y} ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="1"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}">
+    <origin xyz="-${arm_length_back_x} 0 ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="2"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}"
+    >
+
+    <origin xyz="0 ${arm_length_front_y} ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="3"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}">
+    <origin xyz="${arm_length_back_x} 0 ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+</robot>

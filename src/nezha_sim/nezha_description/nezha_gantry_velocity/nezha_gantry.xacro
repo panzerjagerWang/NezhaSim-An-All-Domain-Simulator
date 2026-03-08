@@ -1,0 +1,330 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="nezha_gantry">
+
+  <xacro:include filename="$(find nezha_description)/nezha_gantry_velocity/config/materials.xacro" />
+  <xacro:include filename="$(find nezha_description)/nezha_gantry_velocity/config/nezha_gantry.gazebo" />
+
+  <xacro:property name="PI" value="3.1415926535897931"/>
+  
+  <xacro:property name="frame_width" value="2.0"/>
+  <xacro:property name="frame_height" value="2.5"/>
+  <xacro:property name="frame_depth" value="0.1"/>
+  <xacro:property name="pillar_radius" value="0.05"/>
+  
+  <xacro:property name="slider_length" value="0.3"/>
+  <xacro:property name="slider_width" value="0.2"/>
+  <xacro:property name="slider_height" value="0.15"/>
+  
+  <xacro:property name="lift_arm_length" value="0.4"/>
+  <xacro:property name="lift_arm_radius" value="0.03"/>
+  <xacro:property name="lift_range" value="1.8"/>
+  
+  <xacro:property name="gripper_palm_length" value="0.15"/>
+  <xacro:property name="gripper_finger_length" value="0.1"/>
+  <xacro:property name="gripper_finger_width" value="0.02"/>
+    <xacro:property name="is_static" value="true"/>
+<link name="world"/>
+<joint name="world_to_base" type="fixed">
+  <parent link="world"/>
+  <child link="base_link"/>
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+</joint>
+<link name="base_link"/>
+  <link name="left_pillar">
+    <visual>
+      <geometry>
+        <cylinder radius="${pillar_radius}" length="${frame_height}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${pillar_radius}" length="${frame_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="0.5" ixy="0.0" ixz="0.0" iyy="0.5" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
+
+  <joint name="base_to_left_pillar" type="fixed">
+    <parent link="base_link"/>
+    <child link="left_pillar"/>
+    <origin xyz="${-frame_width/2} 0 ${frame_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="right_pillar">
+    <visual>
+      <geometry>
+        <cylinder radius="${pillar_radius}" length="${frame_height}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="${pillar_radius}" length="${frame_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="10.0"/>
+      <inertia ixx="0.5" ixy="0.0" ixz="0.0" iyy="0.5" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
+
+  <joint name="base_to_right_pillar" type="fixed">
+    <parent link="base_link"/>
+    <child link="right_pillar"/>
+    <origin xyz="${frame_width/2} 0 ${frame_height/2}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="top_beam">
+    <visual>
+      <geometry>
+        <box size="${frame_width} ${frame_depth} ${frame_depth}"/>
+      </geometry>
+      <material name="blue"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${frame_width} ${frame_depth} ${frame_depth}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="15.0"/>
+      <inertia ixx="0.5" ixy="0.0" ixz="0.0" iyy="0.5" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
+
+  <joint name="pillars_to_beam" type="fixed">
+    <parent link="base_link"/>
+    <child link="top_beam"/>
+    <origin xyz="0 0 ${frame_height}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="horizontal_slider">
+    <visual>
+      <geometry>
+        <box size="${slider_length} ${slider_width} ${slider_height}"/>
+      </geometry>
+      <material name="red"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${slider_length} ${slider_width} ${slider_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.1" ixy="0.0" ixz="0.0" iyy="0.1" iyz="0.0" izz="0.1"/>
+    </inertial>
+  </link>
+
+<joint name="horizontal_slider_joint" type="prismatic">
+  <parent link="top_beam"/>
+  <child link="horizontal_slider"/>
+  <origin xyz="0 0 ${-slider_height/2 - frame_depth/2}" rpy="0 0 0"/>
+  <axis xyz="1 0 0"/>
+  <limit lower="${-frame_width/2 + slider_length/2}" 
+         upper="${frame_width/2 - slider_length/2}" 
+         effort="100" velocity="0.5"/>
+  <dynamics damping="3.0" friction="0.2"/>
+</joint>
+
+<joint name="slider_to_connector" type="fixed">
+  <parent link="horizontal_slider"/>
+  <child link="lift_connector"/>
+  <origin xyz="0 0 ${-slider_height/2 - 0.001}" rpy="0 0 0"/>
+</joint>
+
+<joint name="vertical_lift_joint" type="prismatic">
+  <parent link="lift_connector"/>
+  <child link="vertical_lift_arm"/>
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+  <axis xyz="0 0 -1"/>
+  <limit lower="${lift_range}" upper="-${lift_range}" effort="300" velocity="1"/>
+  <dynamics damping="0.2" friction="0.05"/>
+</joint>
+
+
+  <link name="lift_connector">
+    <visual>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+      <material name="gray"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.1 0.1 0.1"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="1.0"/>
+      <inertia ixx="0.01" ixy="0.0" ixz="0.0" iyy="0.01" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+
+
+  <link name="vertical_lift_arm">
+    <visual>
+      <origin xyz="0 0 ${-lift_arm_length/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lift_arm_radius}" length="${lift_arm_length}"/>
+      </geometry>
+      <material name="green"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 ${-lift_arm_length/2}" rpy="0 0 0"/>
+      <geometry>
+        <cylinder radius="${lift_arm_radius}" length="${lift_arm_length}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.0"/>
+      <origin xyz="0 0 ${-lift_arm_length/2}" rpy="0 0 0"/>
+      <inertia ixx="0.05" ixy="0.0" ixz="0.0" iyy="0.05" iyz="0.0" izz="0.01"/>
+    </inertial>
+  </link>
+
+
+
+
+
+  <link name="gripper_base">
+    <visual>
+      <geometry>
+        <box size="${gripper_palm_length} 0.08 0.05"/>
+      </geometry>
+      <material name="orange"/>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="${gripper_palm_length} 0.08 0.05"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.5"/>
+      <inertia ixx="0.001" ixy="0.0" ixz="0.0" iyy="0.001" iyz="0.0" izz="0.001"/>
+    </inertial>
+  </link>
+
+  <joint name="lift_to_gripper" type="fixed">
+    <parent link="vertical_lift_arm"/>
+    <child link="gripper_base"/>
+    <origin xyz="0 0 ${-lift_arm_length - 0.025}" rpy="0 0 0"/>
+  </joint>
+
+  <link name="left_finger">
+    <visual>
+      <origin xyz="0 ${gripper_finger_length/2} 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${gripper_finger_width} ${gripper_finger_length} 0.04"/>
+      </geometry>
+      <material name="yellow"/>
+    </visual>
+    <collision>
+      <origin xyz="0 ${gripper_finger_length/2} 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${gripper_finger_width} ${gripper_finger_length} 0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 ${gripper_finger_length/2} 0" rpy="0 0 0"/>
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="left_finger_joint" type="prismatic">
+    <parent link="gripper_base"/>
+    <child link="left_finger"/>
+    <origin xyz="0 ${-0.04} 0" rpy="0 0 0"/>
+    <axis xyz="0 -1 0"/>
+    <limit lower="0" upper="0.08" effort="50" velocity="0.1"/>
+    <dynamics damping="5.0" friction="0.5"/>
+  </joint>
+
+  <link name="right_finger">
+    <visual>
+      <origin xyz="0 ${-gripper_finger_length/2} 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${gripper_finger_width} ${gripper_finger_length} 0.04"/>
+      </geometry>
+      <material name="yellow"/>
+    </visual>
+    <collision>
+      <origin xyz="0 ${-gripper_finger_length/2} 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${gripper_finger_width} ${gripper_finger_length} 0.04"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.1"/>
+      <origin xyz="0 ${-gripper_finger_length/2} 0" rpy="0 0 0"/>
+      <inertia ixx="0.0001" ixy="0.0" ixz="0.0" iyy="0.0001" iyz="0.0" izz="0.0001"/>
+    </inertial>
+  </link>
+
+  <joint name="right_finger_joint" type="prismatic">
+    <parent link="gripper_base"/>
+    <child link="right_finger"/>
+    <origin xyz="0 ${0.04} 0" rpy="0 0 0"/>
+    <axis xyz="0 1 0"/>
+    <limit lower="0" upper="0.08" effort="50" velocity="0.1"/>
+    <dynamics damping="5.0" friction="0.5"/>
+  </joint>
+
+<!-- 垂直升降关节 - 支持双接口 -->
+  <transmission name="vertical_lift_trans">
+    <type>transmission_interface/SimpleTransmission</type>
+    <joint name="vertical_lift_joint">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    </joint>
+    <actuator name="vertical_lift_motor">
+      <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+      <mechanicalReduction>1</mechanicalReduction>
+    </actuator>
+  </transmission>
+
+
+<!-- 水平滑块关节 - 支持双接口 -->
+<transmission name="horizontal_slider_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="horizontal_slider_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="horizontal_slider_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<!-- 左手指关节 - 支持双接口 -->
+<transmission name="left_finger_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="left_finger_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="left_finger_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+<!-- 右手指关节 - 支持双接口 -->
+<transmission name="right_finger_trans">
+  <type>transmission_interface/SimpleTransmission</type>
+  <joint name="right_finger_joint">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+  </joint>
+  <actuator name="right_finger_motor">
+    <hardwareInterface>hardware_interface/VelocityJointInterface</hardwareInterface>
+    <mechanicalReduction>1</mechanicalReduction>
+  </actuator>
+</transmission>
+
+
+</robot>
+

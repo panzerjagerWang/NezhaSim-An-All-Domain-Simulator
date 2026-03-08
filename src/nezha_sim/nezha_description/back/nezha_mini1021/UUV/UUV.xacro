@@ -1,0 +1,63 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!--
+      The RexROV meshes and hydrodynamic parameters are based on the parameters and dimensions
+      from the SF 30k.
+
+      References:
+        [1] Dukan, Fredrik. "ROV Motion Control Systems." PhD Thesis, NTNU, 2014.
+        [2] Berg, Viktor. Development and Commissioning of a DP system for ROV SF 30k. MS
+            thesis. Institutt for marin teknikk, 2012.
+  -->
+  <!-- includes 
+  <xacro:include filename="$(find uuv_descriptions)/urdf/common.urdf.xacro"/>
+  <xacro:include filename="$(find uuv_sensor_ros_plugins)/urdf/sensor_snippets.xacro"/>
+  <xacro:include filename="$(find uuv_gazebo_ros_plugins)/urdf/snippets.xacro"/>  -->
+<xacro:include filename="$(find nezha_description)/${namespace}/UUV/UUV_baselink.xacro"/>  
+<xacro:include filename="$(find nezha_description)/${namespace}/UUV/UUV_thruster.xacro"/>  
+  <xacro:property name="visual_mesh_file" value="file://$(find nezha_description)/${namespace}/meshes/paddle_0_link.STL"/>
+  <xacro:property name="prop_mesh_file" value="file://$(find uuv_descriptions)/meshes/prop.dae"/>
+  <xacro:property name="mass" value="0.95"/>
+  <xacro:front_paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    radius_rotor="${radius_rotor}"
+    paddle_number="0"
+    color="Red"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    use_own_mesh="true"
+    mesh="$(find nezha_description)/nezha_mini/meshes/paddle_0_link.STL">
+    <origin xyz="${paddle_arm_length_front_x} ${paddle_arm_length_front_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:front_paddle>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    radius_rotor="${radius_rotor}"
+    paddle_number="1"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/nezha_mini/meshes/paddle_1_link.STL">
+    <origin xyz="${paddle_arm_length_back_x} ${paddle_1_arm_length_back_y} ${paddle_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    radius_rotor="${radius_rotor}"
+    paddle_number="2"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/nezha_mini/meshes/paddle_2_link.STL">
+    <origin xyz="${paddle_arm_length_back_x} ${paddle_2_arm_length_back_y} ${paddle_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+</robot>

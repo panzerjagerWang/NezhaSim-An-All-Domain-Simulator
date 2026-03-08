@@ -1,0 +1,192 @@
+<?xml version="1.0"?>
+<robot>
+    <xacro:macro name="nezha_wave_probe_plugin" params="
+    link_name
+    plugin_name:=wave_probe_plugin
+    update_rate:=30
+    probe_name:=wave_probe
+    topic_name:=/wave_height">
+    
+    <gazebo reference="${link_name}">
+      <plugin name="${plugin_name}" filename="libnezha_waveProbePlugin.so">
+        <update_rate>${update_rate}</update_rate>
+        <probe_name>${probe_name}</probe_name>
+        <topic_name>${topic_name}</topic_name>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+  
+   <xacro:macro name="nezha_hydrodynamics_plugin" params="
+    link_name
+    plugin_name:=hydrodynamics_plugin
+    update_rate:=100
+    wave_model:=ocean_waves
+    fluid_density:=1025.0
+    flow_velocity_topic:=/current_velocity
+    debug:=false">
+    
+    <gazebo reference="${link_name}">
+      <plugin name="${plugin_name}" filename="libnasv_hydrodynamicsPlugin.so">
+        <update_rate>${update_rate}</update_rate>
+        <wave_model>${wave_model}</wave_model>
+        <fluid_density>${fluid_density}</fluid_density>
+        <flow_velocity_topic>${flow_velocity_topic}</flow_velocity_topic>
+        <debug>${debug}</debug>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+  <!-- ========== 控制和状态插件 Macros ========== -->
+  
+  <!-- Phase Switch Plugin Macro -->
+  <xacro:macro name="nezha_phase_switch_plugin" params="
+    plugin_name:=phase_switch_plugin
+    update_rate:=10
+    robot_namespace:=/
+    switch_topic:=/phase_switch
+    status_topic:=/phase_status">
+    
+    <gazebo>
+      <plugin name="${plugin_name}" filename="libnezha_phaseSwitchPlugin.so">
+        <update_rate>${update_rate}</update_rate>
+        <robot_namespace>${robot_namespace}</robot_namespace>
+        <switch_topic>${switch_topic}</switch_topic>
+        <status_topic>${status_topic}</status_topic>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Robot State Plugin Macro -->
+  <xacro:macro name="nezha_robot_state_plugin" params="
+    plugin_name:=robot_state_plugin
+    update_rate:=50
+    robot_namespace:=/
+    state_topic:=/robot_state
+    odom_topic:=/odom">
+    
+    <gazebo>
+      <plugin name="${plugin_name}" filename="libnezha_robotStatePlugin.so">
+        <update_rate>${update_rate}</update_rate>
+        <robot_namespace>${robot_namespace}</robot_namespace>
+        <state_topic>${state_topic}</state_topic>
+        <odom_topic>${odom_topic}</odom_topic>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+   <!-- Terrain Detector Plugin Macro -->
+  <xacro:macro name="nezha_terrain_detector_plugin" params="
+    link_name
+    plugin_name:=terrain_detector_plugin
+    update_rate:=20
+    water_surface_level:=0.0
+    surface_tolerance:=0.05
+    water_keywords:='water,ocean,sea'
+    detection_topic:=/terrain_detection">
+    
+    <gazebo reference="${link_name}">
+      <plugin name="${plugin_name}" filename="libnezha_terrainDetectorPlugin.so">
+        <update_rate>${update_rate}</update_rate>
+        <water_surface_level>${water_surface_level}</water_surface_level>
+        <surface_tolerance>${surface_tolerance}</surface_tolerance>
+        <water_keywords>${water_keywords}</water_keywords>
+        <detection_topic>${detection_topic}</detection_topic>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Transmedia Drag Plugin Macro -->
+  <xacro:macro name="nezha_transmedia_drag_plugin" params="
+    link_name
+    plugin_name:=transmedia_drag_plugin
+    update_rate:=100
+    config_file
+    phase_service:=/get_phase_sample
+    drag_topic:=/drag_forces">
+    
+    <gazebo reference="${link_name}">
+      <plugin name="${plugin_name}" filename="libnezha_transmediaDragPlugin.so">
+        <update_rate>${update_rate}</update_rate>
+        <config_file>${config_file}</config_file>
+        <phase_service>${phase_service}</phase_service>
+        <drag_topic>${drag_topic}</drag_topic>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+  <!-- Buoyant Object Plugin Macro -->
+<xacro:macro name="nezha_buoyant_object_plugin" params="
+  link_name
+  plugin_name:=buoyant_object_plugin
+  fluid_density:=1025.0
+  flow_velocity_topic:=/current_velocity
+  debug:=false
+  volume:=0.5
+  cob_x:=0
+  cob_y:=0
+  cob_z:=0
+  neutrally_buoyant:=true">
+  
+  <gazebo reference="${link_name}">
+    <plugin name="${plugin_name}" filename="libnezha_buoyant_object_plugin.so">
+      <fluid_density>${fluid_density}</fluid_density>
+      <flow_velocity_topic>${flow_velocity_topic}</flow_velocity_topic>
+      <debug>${debug}</debug>
+      <volume>${volume}</volume>
+      <center_of_buoyancy>${cob_x} ${cob_y} ${cob_z}</center_of_buoyancy>
+      <neutrally_buoyant>${neutrally_buoyant}</neutrally_buoyant>
+    </plugin>
+  </gazebo>
+</xacro:macro>
+
+<!-- Motor Model Plugin Macro -->
+<xacro:macro name="nezha_motor_model_plugin" params="
+  link_name
+  joint_name
+  plugin_name:=motor_model_plugin
+  robot_namespace:=''
+  command_topic:=/gazebo/command/motor_speed
+  motor_number:=0
+  turning_direction:=cw
+  time_constant_up:=0.0125
+  time_constant_down:=0.025
+  max_rot_velocity:=838
+  motor_constant:=8.54858e-06
+  moment_constant:=0.016
+  drag_coefficient:=8.06428e-05
+  rolling_moment_coefficient:=1e-06
+  rotor_velocity_slowdown_sim:=10">
+  
+  <gazebo reference="${link_name}">
+    <plugin name="${plugin_name}" filename="libnezha_motor_model.so">
+      <joint_name>${joint_name}</joint_name>
+      <link_name>${link_name}</link_name>
+      <robot_namespace>${robot_namespace}</robot_namespace>
+      <command_sub_topic>${command_topic}</command_sub_topic>
+      <motor_number>${motor_number}</motor_number>
+      <turning_direction>${turning_direction}</turning_direction>
+      <time_constant_up>${time_constant_up}</time_constant_up>
+      <time_constant_down>${time_constant_down}</time_constant_down>
+      <max_rot_velocity>${max_rot_velocity}</max_rot_velocity>
+      <motor_constant>${motor_constant}</motor_constant>
+      <moment_constant>${moment_constant}</moment_constant>
+      <drag_coefficient>${drag_coefficient}</drag_coefficient>
+      <rolling_moment_coefficient>${rolling_moment_coefficient}</rolling_moment_coefficient>
+      <rotor_velocity_slowdown_sim>${rotor_velocity_slowdown_sim}</rotor_velocity_slowdown_sim>
+    </plugin>
+  </gazebo>
+</xacro:macro>
+
+<!-- Wavefield Plugin Macro -->
+<xacro:macro name="nezha_wavefield_plugin" params="
+  plugin_name:=wavefield_plugin
+  update_rate:=30
+  wave_topic:=/wave_field
+  wave_model:=ocean_waves">
+  
+  <gazebo>
+    <plugin name="${plugin_name}" filename="libnezha_wavefield_plugin.so">
+      <update_rate>${update_rate}</update_rate>
+      <wave_topic>${wave_topic}</wave_topic>
+      <wave_model>${wave_model}</wave_model>
+    </plugin>
+  </gazebo>
+</xacro:macro>
+ </robot>

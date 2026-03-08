@@ -1,0 +1,15 @@
+spotlight:
+  joint_state_controller:
+    type: joint_state_controller/JointStateController
+    publish_rate: 50
+
+  base_yaw_position:
+    type: effort_controllers/JointPositionController
+    joint: rexrov_spot1_base_yaw_joint
+    pid: {p: 20.0, i: 0.0, d: 1.0, i_clamp_min: -0.5, i_clamp_max: 0.5}
+
+  head_pitch_position:
+    type: effort_controllers/JointPositionController
+    joint: rexrov_spot1_head_pitch_joint
+    pid: {p: 15.0, i: 0.0, d: 0.8, i_clamp_min: -0.5, i_clamp_max: 0.5}
+

@@ -1,0 +1,172 @@
+<?xml version="1.0"?>
+<!--
+  Copyright 2015 Fadri Furrer, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Michael Burri, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Mina Kamel, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Janosch Nikolic, ASL, ETH Zurich, Switzerland
+  Copyright 2015 Markus Achtelik, ASL, ETH Zurich, Switzerland
+
+  Licensed under the Apache License, Version 2.0 (the "License");
+  you may not use this file except in compliance with the License.
+  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+  Unless required by applicable law or agreed to in writing, software
+  distributed under the License is distributed on an "AS IS" BASIS,
+  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  See the License for the specific language governing permissions and
+  limitations under the License.
+-->
+
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <!-- Macro for the inertia of a box -->
+  <xacro:macro name="box_inertia" params="x y z mass">
+    <inertia ixx="${0.0833333 * mass * (y*y + z*z)}" ixy="0.0" ixz="0.0"
+      iyy="${0.0833333 * mass * (x*x + z*z)}" iyz="0.0"
+      izz="${0.0833333 * mass * (x*x + y*y)}" />
+  </xacro:macro>
+
+  <!-- Macro for the inertial properties of a box -->
+  <xacro:macro name="box_inertial" params="x y z mass *origin">
+    <inertial>
+      <mass value="${mass}" />
+      <xacro:insert_block name="origin" />
+      <xacro:box_inertia x="${x}" y="${y}" z="${z}" mass="${mass}" />
+    </inertial>
+  </xacro:macro>
+  <xacro:macro name="mavlink_interface_macro" 
+    params="namespace mavlink_sub_topic imu_sub_topic mavlink_pub_topic 
+      motors_speeds_pub_topic gps_update_freq rotor_count reference_magnetic_field_north 
+      reference_magnetic_field_east reference_magnetic_field_down reference_latitude 
+      reference_longitude reference_altitude">
+    <gazebo>
+      <plugin name="mavlink_interface" filename="librotors_gazebo_mavlink_interface.so">
+        <robotNamespace>${namespace}</robotNamespace>
+	<mavlinkControlSubTopic>${mavlink_sub_topic}</mavlinkControlSubTopic>
+        <imuSubTopic>${imu_sub_topic}</imuSubTopic>
+        <mavlinkHilSensorPubTopic>${mavlink_pub_topic}</mavlinkHilSensorPubTopic>
+	<motorSpeedsPubTopic>${motors_speeds_pub_topic}</motorSpeedsPubTopic>
+	<gpsUpdateFreq>${gps_update_freq}</gpsUpdateFreq> <!-- Frequency of HIL GPS messages [Hz] -->
+	<rotorCount>${rotor_count}</rotorCount>
+        <!-- [Gauss] Below are the North, East, and Down components of the Earth's magnetic field at the reference location.
+             The default reference location is Zurich (lat=+47.3667degN, lon=+8.5500degE, h=+500m, WGS84).
+	     You can obtain the magnetic field strength for your location using the World Magnetic Model: 
+             https://www.ngdc.noaa.gov/geomag/WMM/calculators.shtml -->
+        <referenceMagNorth>${reference_magnetic_field_north}</referenceMagNorth>
+        <referenceMagEast>${reference_magnetic_field_east}</referenceMagEast>
+        <referenceMagDown>${reference_magnetic_field_down}</referenceMagDown>
+	<referenceLatitude>${reference_latitude}</referenceLatitude> <!-- the initial latitude [degrees [-90, 90]] -->
+        <referenceLongitude>${reference_longitude}</referenceLongitude> <!-- the initial longitude [degrees [-180, 180]] -->
+        <referenceAltitude>${reference_altitude}</referenceAltitude> <!-- the initial altitude [m] -->
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+  <!-- Main multirotor link -->
+  <xacro:macro name="multirotor_base_macro"
+    params="namespace mass body_width body_height use_mesh_file mesh_file *inertia">
+    <link name="${namespace}/base_link"></link>
+
+    <joint name="${namespace}/base_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <parent link="${namespace}/base_link" />
+      <child link="${namespace}/base_link_inertia" />
+    </joint>
+
+    <link name="${namespace}/base_link_inertia">
+      <inertial>
+        <mass value="${mass}" />  <!-- [kg] -->
+        <origin xyz="0 0 0" />
+        <xacro:insert_block name="inertia" />
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <xacro:if value="${use_mesh_file}">
+            <mesh filename="${mesh_file}" scale="1 1 1" />
+          </xacro:if>
+          <xacro:unless value="${use_mesh_file}">
+            <box size="${body_width} ${body_width} ${body_height}"/> <!-- [m] [m] [m] -->
+          </xacro:unless>
+        </geometry>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="${body_width} ${body_width} ${body_height}" /> <!-- [m] [m] [m] -->
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- attach multirotor_base_plugin to the base_link -->
+    <gazebo>
+      <plugin filename="librotors_gazebo_multirotor_base_plugin.so" name="multirotor_base_plugin">
+        <robotNamespace>${namespace}</robotNamespace>
+        <linkName>${namespace}/base_link</linkName>
+        <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- Rotor joint and link -->
+  <xacro:macro name="vertical_rotor"
+    params="robot_namespace suffix direction motor_constant moment_constant parent mass_rotor scale_rotor radius_rotor time_constant_up time_constant_down max_rot_velocity motor_number blade_type rotor_drag_coefficient rolling_moment_coefficient color use_own_mesh mesh *origin *inertia">
+    <joint name="${robot_namespace}/rotor_${motor_number}_joint" type="continuous">
+      <xacro:insert_block name="origin" />
+      <axis xyz="0 0 1" />
+      <!-- TODO(ff): not currently set because it's not yet supported -->
+      <!-- <limit effort="2000" velocity="${max_rot_velocity}" /> -->
+      <parent link="${parent}" />
+      <child link="${robot_namespace}/rotor_${motor_number}" />
+    </joint>
+    <link name="${robot_namespace}/rotor_${motor_number}">
+      <inertial>
+        <mass value="${mass_rotor}" /> <!-- [kg] -->
+        <xacro:insert_block name="inertia" />
+      </inertial>
+      <visual>
+        <geometry>
+          <!-- <cylinder length="0.005" radius="${radius_rotor}"/> --> <!-- [m] -->
+          <xacro:if value="${use_own_mesh}">
+            <mesh filename="${mesh}"
+              scale="${scale_rotor} ${scale_rotor} ${scale_rotor}" />
+          </xacro:if>
+          <xacro:unless value="${use_own_mesh}">
+            <mesh filename="package://rotors_description/meshes/propeller_${direction}.dae"
+              scale="${radius_rotor} ${radius_rotor} ${radius_rotor}" /> <!-- The propeller meshes have a radius of 1m -->
+            <!-- <box size="${2*radius_rotor} 0.01 0.005"/> -->
+          </xacro:unless>
+        </geometry>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="0.005" radius="${radius_rotor}" /> <!-- [m] -->
+        </geometry>
+      </collision>
+    </link>
+    <gazebo>
+      <plugin name="${robot_namespace}_${suffix}_motor_model" filename="libnezha_motor_model.so">
+        <robotNamespace>${robot_namespace}</robotNamespace>
+        <jointName>${robot_namespace}/rotor_${motor_number}_joint</jointName>
+        <linkName>${robot_namespace}/rotor_${motor_number}</linkName>
+        <turningDirection>${direction}</turningDirection>
+        <timeConstantUp>${time_constant_up}</timeConstantUp>
+        <timeConstantDown>${time_constant_down}</timeConstantDown>
+        <maxRotVelocity>${max_rot_velocity}</maxRotVelocity>
+        <motorConstant>${motor_constant}</motorConstant>
+        <momentConstant>${moment_constant}</momentConstant>
+        <commandSubTopic>gazebo/command/motor_speed</commandSubTopic>
+        <motorNumber>${motor_number}</motorNumber>
+        <rotorDragCoefficient>${rotor_drag_coefficient}</rotorDragCoefficient>
+        <rollingMomentCoefficient>${rolling_moment_coefficient}</rollingMomentCoefficient>
+        <motorSpeedPubTopic>motor_speed/${motor_number}</motorSpeedPubTopic>
+        <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
+      </plugin>
+    </gazebo>
+    <gazebo reference="${robot_namespace}/rotor_${motor_number}">
+      <material>Gazebo/${color}</material>
+    </gazebo>
+  </xacro:macro>
+</robot>

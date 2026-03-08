@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="nezha_rocket">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0 -0.016735 -6.9389E-18"
+        rpy="0 0 0" />
+      <mass
+        value="0.5297" />
+      <inertia
+        ixx="0.00091698"
+        ixy="1.843E-20"
+        ixz="-2.1269E-20"
+        iyy="0.00016611"
+        iyz="1.1032E-21"
+        izz="0.00091698" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://nezha_rocket/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="1 1 1 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://nezha_rocket/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+</robot>

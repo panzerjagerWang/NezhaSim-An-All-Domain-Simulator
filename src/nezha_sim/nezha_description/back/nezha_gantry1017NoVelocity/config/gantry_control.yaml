@@ -1,0 +1,47 @@
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50
+
+# 位置控制器（原有）
+horizontal_position_controller:
+  type: effort_controllers/JointPositionController
+  joint: horizontal_slider_joint
+  pid: {p: 400.0, i: 0.1, d: 40.0, i_clamp_min: -10.0, i_clamp_max: 10.0}
+
+vertical_position_controller:
+  type: effort_controllers/JointPositionController
+  joint: vertical_lift_joint
+  pid: {p: 600.0, i: 0.1, d: 60.0, i_clamp_min: -10.0, i_clamp_max: 10.0}
+
+left_finger_controller:
+  type: effort_controllers/JointPositionController
+  joint: left_finger_joint
+  pid: {p: 200.0, i: 0.05, d: 20.0, i_clamp_min: -5.0, i_clamp_max: 5.0}
+
+right_finger_controller:
+  type: effort_controllers/JointPositionController
+  joint: right_finger_joint
+  pid: {p: 200.0, i: 0.05, d: 20.0, i_clamp_min: -5.0, i_clamp_max: 5.0}
+
+# 新增：速度控制器（和上面对应的关节一一匹配）
+horizontal_velocity_controller:
+  type: effort_controllers/JointVelocityController
+  joint: horizontal_slider_joint
+  pid: {p: 50.0, i: 0.0, d: 1.0, i_clamp_min: -20.0, i_clamp_max: 20.0}
+
+vertical_velocity_controller:
+  type: effort_controllers/JointVelocityController
+  joint: vertical_lift_joint
+  pid: {p: 80.0, i: 0.0, d: 1.5, i_clamp_min: -30.0, i_clamp_max: 30.0}
+
+left_finger_velocity_controller:
+  type: effort_controllers/JointVelocityController
+  joint: left_finger_joint
+  pid: {p: 20.0, i: 0.0, d: 0.5, i_clamp_min: -10.0, i_clamp_max: 10.0}
+
+right_finger_velocity_controller:
+  type: effort_controllers/JointVelocityController
+  joint: right_finger_joint
+  pid: {p: 20.0, i: 0.0, d: 0.5, i_clamp_min: -10.0, i_clamp_max: 10.0}
+
+

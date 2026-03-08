@@ -1,0 +1,210 @@
+<?xml version="1.0"?>
+
+<robot name="nezha_rocket" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu" />
+
+  <xacro:default_imu namespace="${namespace}" parent_link="${namespace}/base_link" />
+  <xacro:if value="$(arg enable_ground_truth)">
+    <xacro:ground_truth_imu_and_odometry namespace="${namespace}" parent_link="${namespace}/base_link" />
+  </xacro:if>
+  <xacro:if value="$(arg enable_logging)">
+    <!-- Instantiate a logger -->
+    <xacro:bag_plugin_macro
+      namespace="${namespace}"
+      bag_file="$(arg log_file)"
+      rotor_velocity_slowdown_sim="${rotor_velocity_slowdown_sim}"
+      wait_to_record_bag="$(arg wait_to_record_bag)" />
+  </xacro:if>
+
+<xacro:arg name="namespace" default="nezha_rocket"/>
+<xacro:property name="namespace" value="$(arg namespace)"/>
+
+  <xacro:macro name="nezha_rocket_complete" 
+    params="namespace mass body_width body_height use_mesh_file mesh_file 
+            inertial_reference_frame debug *body_inertia">
+    
+    <!-- ========== 基础链接（来自 multirotor_base_macro）========== -->
+    <link name="${namespace}/base_link"></link>
+
+    <joint name="${namespace}/base_joint" type="fixed">
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <parent link="${namespace}/base_link" />
+      <child link="${namespace}/base_link_inertia" />
+    </joint>
+
+    <link name="${namespace}/base_link_inertia">
+      <inertial>
+        <mass value="${mass}" />
+        <origin xyz="0 0 0" />
+        <xacro:insert_block name="body_inertia" />
+      </inertial>
+
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <xacro:if value="${use_mesh_file}">
+            <mesh filename="${mesh_file}" scale="1 1 1" />
+          </xacro:if>
+          <xacro:unless value="${use_mesh_file}">
+            <box size="${body_width} ${body_width} ${body_height}"/>
+          </xacro:unless>
+        </geometry>
+      </visual>
+
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <box size="${body_width} ${body_width} ${body_height}" />
+        </geometry>
+      </collision>
+    </link>
+
+    <!-- ========== Gazebo 插件 1: Multirotor Base Plugin ========== -->
+    <gazebo>
+      <plugin filename="librotors_gazebo_multirotor_base_plugin.so" 
+              name="multirotor_base_plugin">
+        <robotNamespace>${namespace}</robotNamespace>
+        <linkName>${namespace}/base_link</linkName>
+        <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
+      </plugin>
+    </gazebo>
+
+    <!-- ========== Gazebo 插件 2: Underwater Plugin ========== -->
+    <gazebo>
+      <plugin name="nezha_underwater_plugin" filename="libnezha_underwater_plugin.so">
+        <fluid_density>1028.0</fluid_density>
+        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+        <debug>${debug}</debug>
+        <xacro:nezha_hydro_model namespace="${namespace}"/>
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+
+
+<!-- ========================================
+     Wave Probe Plugin Macro
+     ======================================== -->
+  <xacro:macro name="wave_probe_plugin" params="
+    plugin_name:=wave_probe
+    namespace:=''
+    L:=1.0
+    z_offset:=0.0
+    bound_link:=base_link
+    wavefield_name:=ocean_waves">
+    
+    <gazebo>
+      <plugin name="${plugin_name}" filename="libnezha_wave_probe_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <L>${L}</L>
+        <zTopOffset>${z_offset}</zTopOffset>
+        <boundName>${bound_link}</boundName>
+        <wavefieldCandidate>${wavefield_name}</wavefieldCandidate>
+      </plugin>
+    </gazebo>
+    
+  </xacro:macro>
+<xacro:macro name="phase_switch_plugin" params="
+  namespace:=nezha_rocket
+  target_link:=base_link
+  update_rate:=50.0
+  transition_frames:=5
+  surface_plugin_name:=hydrodynamics
+  underwater_plugin_name:=uuv_plugin
+  surface_plugin_file:=libnezha_surface_plugin.so
+  underwater_plugin_file:=libnezha_underwater_plugin.so
+">
+  <gazebo>
+    <plugin name="phase_switch_plugin" 
+            filename="libnezha_phase_switch_plugin.so">   
+      <robot_namespace>${namespace}</robot_namespace>
+      <target_link>${target_link}</target_link>
+      <update_rate>${update_rate}</update_rate>
+      <transition_frames>${transition_frames}</transition_frames>
+      
+      <surface_plugin_name>${surface_plugin_name}</surface_plugin_name>
+      <underwater_plugin_name>${underwater_plugin_name}</underwater_plugin_name>
+      
+      <surface_plugin_file>${surface_plugin_file}</surface_plugin_file>
+      <underwater_plugin_file>${underwater_plugin_file}</underwater_plugin_file>
+      
+    </plugin>
+  </gazebo>
+  
+</xacro:macro>
+<!-- ========================================
+     Robot State Plugin Macro
+     ======================================== -->
+<xacro:macro name="RobotStatePlugin" params="model_namespace">
+  <gazebo>
+    <plugin name="RobotStatePlugin" filename="libnezha_robot_state_plugin.so">
+      <namespace>${model_namespace}</namespace>
+    </plugin>
+  </gazebo>
+</xacro:macro>
+
+<!-- ========================================
+     Hydrodynamics Plugin Macro
+     ======================================== -->
+<xacro:macro name="hydrodynamics_plugin" 
+             params="wave_model:='nezha_ocean_waves'
+                     debug:=false">
+  
+  <gazebo>
+    <plugin name="nezha_surface_plugin" filename="libnezha_surface_plugin.so">
+      <wave_model>${wave_model}</wave_model>
+      <markers>
+        <xacro:if value="${debug}">
+          <update_rate>30</update_rate>
+          <water_patch>true</water_patch>
+          <waterline>true</waterline>
+          <underwater_surface>true</underwater_surface>
+        </xacro:if>
+        
+        <xacro:unless value="${debug}">
+          <update_rate>30</update_rate>
+          <water_patch>false</water_patch>
+          <waterline>false</waterline>
+          <underwater_surface>false</underwater_surface>
+        </xacro:unless>
+      </markers>
+    </plugin>
+  </gazebo>
+  
+</xacro:macro>
+
+<xacro:macro name="apply_nezha_plugins" params="
+  namespace
+  target_link:=base_link
+  wave_model:=nezha_ocean_waves
+  debug:=true
+">
+  
+  <xacro:hydrodynamics_plugin 
+    wave_model="${wave_model}"
+    debug="${debug}"/>
+  <xacro:phase_switch_plugin
+    namespace="${namespace}"
+    target_link="${target_link}"
+    update_rate="50.0"
+    transition_frames="5"
+    
+    surface_plugin_name="nezha_surface_plugin"
+    underwater_plugin_name="nezha_underwater_plugin"
+    
+    surface_plugin_file="libnezha_surface_plugin.so"
+    underwater_plugin_file="libnezha_underwater_plugin.so"/>
+  
+  <xacro:wave_probe_plugin 
+    plugin_name="usv_wave_probe"
+    namespace="${namespace}"
+    L="2.5"
+    z_offset="0.1"
+    bound_link="${namespace}/${target_link}"
+    wavefield_name="${wave_model}::wavefield_entity"/>
+  <xacro:RobotStatePlugin model_namespace="${namespace}"/>
+
+</xacro:macro>
+
+</robot>
+

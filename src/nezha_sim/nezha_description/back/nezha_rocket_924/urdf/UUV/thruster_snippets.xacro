@@ -1,0 +1,98 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="box_inertia" params="x y z mass">
+    <inertia ixx="${0.0833333 * mass * (y*y + z*z)}" ixy="0.0" ixz="0.0"
+      iyy="${0.0833333 * mass * (x*x + z*z)}" iyz="0.0"
+      izz="${0.0833333 * mass * (x*x + y*y)}" />
+  </xacro:macro>
+
+  <!-- Macro for the inertial properties of a box -->
+  <xacro:macro name="box_inertial" params="x y z mass *origin">
+    <inertial>
+      <mass value="${mass}" />
+      <xacro:insert_block name="origin" />
+      <xacro:box_inertia x="${x}" y="${y}" z="${z}" mass="${mass}" />
+    </inertial>
+  </xacro:macro>
+  
+
+
+  <xacro:macro name="rotor_dyn_first_order_macro" params="time_constant">
+    <dynamics>
+      <type>FirstOrder</type>
+      <timeConstant>${time_constant}</timeConstant>
+    </dynamics>
+  </xacro:macro>
+  <xacro:macro name="thruster_cf_basic_macro"
+    params="rotor_constant">
+    <conversion>
+      <type>Basic</type>
+      <rotorConstant>${rotor_constant}</rotorConstant>
+    </conversion>
+  </xacro:macro>
+  <!-- First order dynamics -->
+
+  <xacro:macro name="rotor_dyn_first_order_macro" params="time_constant">
+    <dynamics>
+      <type>FirstOrder</type>
+      <timeConstant>${time_constant}</timeConstant>
+    </dynamics>
+  </xacro:macro>
+
+  <xacro:macro name="thruster_cf_basic_macro"
+    params="rotor_constant">
+    <conversion>
+      <type>Basic</type>
+      <rotorConstant>${rotor_constant}</rotorConstant>
+    </conversion>
+  </xacro:macro>
+
+  <!--
+    2) Dead-zone nonlinearity described in [1]
+      [1] Bessa, Wallace Moreira, Max Suell Dutra, and Edwin Kreuzer. "Thruster
+          dynamics compensation for the positioning of underwater robotic vehicles
+          through a fuzzy sliding mode based approach." ABCM Symposium Series in
+          Mechatronics. Vol. 2. 2006.
+      Input: x
+      Output: thrust
+      Function:
+        thrust = rotorConstantL * (x * abs(x) - deltaL), if x * abs(x) <= deltaL
+        thrust = 0, if deltaL < x * abs(x) < deltaR
+        thrust = rotorConstantR * (x * abs(x) - deltaR), if x * abs(x) >= deltaL
+  -->
+  <xacro:macro name="thruster_cf_dead_zone_macro"
+    params="rotor_constant_l
+            rotor_constant_r
+            delta_l
+            delta_r">
+    <conversion>
+      <type>Bessa</type>
+      <rotorConstantL>${rotor_constant_l}</rotorConstantL>
+      <rotorConstantR>${rotor_constant_r}</rotorConstantR>
+      <deltaL>${delta_l}</deltaL>
+      <deltaR>${delta_r}</deltaR>
+    </conversion>
+  </xacro:macro>
+
+  <!--
+    3) Linear interpolation
+      If you have access to the thruster's data sheet, for example,
+      you can enter samples of the curve's input and output values
+      and the thruster output will be found through linear interpolation
+      of the given samples.
+  -->
+  <xacro:macro name="thruster_cf_linear_interp_macro"
+    params="input_values
+            output_values">
+    <conversion>
+      <type>LinearInterp</type>
+      <inputValues>${input_values}</inputValues>
+      <outputValues>${output_values}</outputValues>
+    </conversion>
+  </xacro:macro>
+
+  <!-- THRUSTER MODULE MACROS  -->
+
+
+
+</robot>

@@ -1,0 +1,174 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- ==================== 基本参数配置 ==================== -->
+  <arg name="mav_name" default="nezha_husky"/>
+  <arg name="world_name" default="nezha_lake"/>
+  <arg name="robot_namespace" default="$(arg mav_name)"/>
+  
+  <!-- 日志和调试 -->
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="true"/>
+  <arg name="log_file" default="$(arg mav_name)"/>
+  <arg name="debug" default="false"/>
+  <arg name="verbose" default="true"/>
+  
+  <!-- Gazebo 设置 -->
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="true"/>
+  <arg name="use_sim_time" default="true"/>
+  
+  <!-- 超时设置 -->
+  <arg name="set_timeout" default="false"/>
+  <arg name="timeout" default="300" if="$(arg set_timeout)"/>
+
+  <!-- 初始位置 -->
+  <arg name="x" default="0.0"/>
+  <arg name="y" default="0.0"/>
+  <arg name="z" default="0.5"/>
+  <arg name="yaw" default="0.0"/>
+
+  <!-- 控制器配置 -->
+  <arg name="enable_ekf" default="true"/>
+  <arg name="joystick" default="true"/>
+  <arg name="keyboard" default="false"/>
+  <arg name="joy_dev" default="/dev/input/js0"/>
+  <arg name="config_extras" default="$(find husky_control)/config/empty.yaml"/>
+
+  <!-- ==================== 环境变量设置 ==================== -->
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find nezha_gazebo)/models:$(find husky_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models:$(find husky_gazebo)/models"/>
+
+  <!-- ==================== 启动 Gazebo 世界 ==================== -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/nezha_lake.world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="$(arg debug)"/>
+  </include>
+
+  <!-- ==================== UUV 辅助节点 ==================== -->
+  <!-- 发布世界 NED 坐标系 -->
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+  
+  <!-- 发布世界模型 -->
+  <node name="publish_world_models"
+        pkg="uuv_assistants"
+        type="publish_world_models.py"
+        output="screen">
+    <rosparam subst_value="true">
+      meshes:
+        lake:
+          mesh: package://uuv_gazebo_worlds/models/lake/meshes/LakeBottom.dae
+          model: lake
+    </rosparam>
+  </node>
+
+  <!-- 仿真计时器（可选） -->
+  <group if="$(arg set_timeout)">
+    <include file="$(find uuv_assistants)/launch/set_simulation_timer.launch">
+      <arg name="timeout" value="$(arg timeout)"/>
+    </include>
+  </group>
+
+  <!-- ==================== 机器人命名空间 ==================== -->
+  <group ns="$(arg robot_namespace)">
+
+    <!-- ==================== 机器人描述 ==================== -->
+    <param name="robot_description" 
+           command="$(find xacro)/xacro '$(find nezha_description)/$(arg mav_name)/$(arg mav_name)_base.xacro' 
+                    robot_namespace:=$(arg robot_namespace)" />
+
+    <!-- ==================== 状态发布器 ==================== -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+
+    <!-- ==================== TF 转换 ==================== -->
+    <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+      <arg name="namespace" value="$(arg robot_namespace)"/>
+      <arg name="world_frame" value="world"/>
+      <arg name="child_frame_id" value="/$(arg robot_namespace)/base_link"/>
+    </include>
+
+    <!-- ==================== 控制器配置 ==================== -->
+    <!-- 加载控制器参数 -->
+    <rosparam command="load" file="$(find husky_control)/config/control.yaml" />
+
+    <!-- 启动控制器 -->
+    <node name="base_controller_spawner" pkg="controller_manager" type="spawner"
+          args="husky_joint_publisher husky_velocity_controller"/>
+    
+    <!-- 轮子半径倍数 -->
+    <rosparam param="wheel_radius_multiplier" ns="husky_velocity_controller" subst_value="True">
+      $(optenv HUSKY_WHEEL_MULTIPLIER 1.0)
+    </rosparam>
+
+    <!-- ==================== 定位（EKF） ==================== -->
+    <group if="$(arg enable_ekf)">
+      <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
+        <rosparam command="load" file="$(find husky_control)/config/localization.yaml" />
+      </node>
+    </group>
+
+    <!-- ==================== 速度命令多路复用 ==================== -->
+    <node name="twist_mux" pkg="twist_mux" type="twist_mux">
+      <rosparam command="load" file="$(find husky_control)/config/twist_mux.yaml"/>
+      <remap from="cmd_vel_out" to="husky_velocity_controller/cmd_vel"/>
+    </node>
+
+    <!-- ==================== 交互式标记服务器 ==================== -->
+    <node pkg="interactive_marker_twist_server" type="marker_server" 
+          name="twist_marker_server" output="screen">
+      <param name="link_name" value="base_link" />
+    </node>
+
+    <!-- ==================== 遥控配置 ==================== -->
+    <!-- 手柄遥控 -->
+    <group ns="joy_teleop" if="$(arg joystick)">
+      <!-- PS4 手柄配置（默认） -->
+      <group unless="$(optenv HUSKY_LOGITECH 0)">
+        <rosparam command="load" file="$(find husky_control)/config/teleop_ps4.yaml" />
+      </group>
+
+      <!-- Logitech 手柄配置 -->
+      <group if="$(optenv HUSKY_LOGITECH 0)">
+        <rosparam command="load" file="$(find husky_control)/config/teleop_logitech.yaml" />
+        <param name="joy_node/dev" value="$(arg joy_dev)" />
+      </group>
+
+      <node pkg="joy" type="joy_node" name="joy_node" />
+      <node pkg="teleop_twist_joy" type="teleop_node" name="teleop_twist_joy"/>
+    </group>
+
+    <!-- 键盘遥控 -->
+    <group ns="kb_teleop" if="$(arg keyboard)">
+      <node pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" 
+            name="teleop_twist_kb" />
+    </group>
+
+    <!-- ==================== RealSense 相机（可选） ==================== -->
+    <group if="$(optenv HUSKY_REALSENSE_ENABLED 0)">
+      <include file="$(find husky_gazebo)/launch/realsense.launch" />
+    </group>
+
+    <!-- ==================== 生成机器人模型 ==================== -->
+    <node name="spawn_husky_model" pkg="gazebo_ros" type="spawn_model"
+          args="-x $(arg x)
+                -y $(arg y)
+                -z $(arg z)
+                -Y $(arg yaw)
+                -unpause
+                -urdf
+                -param robot_description
+                -model $(arg mav_name)
+                -robot_namespace $(arg robot_namespace)" />
+
+    <!-- ==================== 额外配置覆盖 ==================== -->
+    <rosparam command="load" file="$(arg config_extras)" subst_value="true" />
+
+  </group>
+
+</launch>
+
+

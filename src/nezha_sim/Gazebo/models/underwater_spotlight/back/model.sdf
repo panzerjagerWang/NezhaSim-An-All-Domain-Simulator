@@ -1,0 +1,54 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="underwater_spotlight">
+    <static>true</static>
+    <!-- 模型整体抬至 z=长度/2，使底部落在 z=0 上方 -->
+    <pose>0 0 2.5 0 0 0</pose>
+
+    <link name="spotlight_link">
+      <visual name="spotlight_visual">
+        <geometry>
+          <cylinder>
+            <radius>0.2</radius>
+            <length>5.0</length>
+          </cylinder>
+        </geometry>
+        <material>
+          <!-- 提高环境和漫反射，显得更亮 -->
+          <ambient>0.8 0.8 0.8 1</ambient>
+          <diffuse>1 1 1 1</diffuse>
+          <specular>0.9 0.9 0.9 1</specular>
+          <!-- 关键：自发光，数值越高越“发亮”；这里给接近白的发光 -->
+          <emissive>1 1 1 1</emissive>
+        </material>
+      </visual>
+      <!-- 无 collision，纯可视 -->
+    </link>
+
+    <!-- 分离的聚光灯 -->
+    <light name="spotlight_light" type="spot">
+      <!-- 放在圆柱顶部附近，沿 +Z 指向 -->
+      <pose>0 0 5.2 0 0 0</pose>
+      <diffuse>1 1 1 1</diffuse>
+      <specular>0.3 0.3 0.3 1</specular>
+      <attenuation>
+        <!-- 增加照明范围与强度感知 -->
+        <range>30</range>
+        <constant>0.2</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>0 0 1</direction>
+      <spot>
+        <inner_angle>0.2</inner_angle>
+        <outer_angle>0.7</outer_angle>
+        <falloff>0.7</falloff>
+      </spot>
+      <cast_shadows>true</cast_shadows>
+    </light>
+
+  </model>
+</sdf>
+
+
+

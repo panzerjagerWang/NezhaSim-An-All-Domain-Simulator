@@ -1,0 +1,129 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" >
+  <xacro:macro name="nezha_base" params="namespace *gazebo inertial_reference_frame">
+    <!-- base_link according to ROS conventions: x forward, z up -->
+    <link name="${namespace}/base_link">
+      <inertial>
+        <mass value="${mass}"/>
+        <origin xyz="0 0 0"/>
+        <inertia ixx="525.39" ixy="1.44" ixz="33.41" iyy="794.20" iyz="2.6" izz="691.23"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <mesh filename="${visual_mesh_file}" scale="1 1 1"/>
+        </geometry>
+      </visual>
+      <!-- bottom plate -->
+      <collision>
+        <origin xyz="0 0 -0.75" rpy="0 0 0"/>
+        <geometry>
+          <box size="2.56 1.50 0.10"/>
+        </geometry>
+      </collision>
+      <!-- top plate -->
+      <collision>
+        <origin xyz="0 0 0.60" rpy="0 0 0"/>
+        <geometry><box size="2.56 1.50 0.40"/></geometry>
+      </collision>
+      <!-- left / right sides -->
+      <collision>
+        <origin xyz="-0.20 0.70 -0.15" rpy="0 0 0"/>
+        <geometry><box size="2.20 0.10 1.10"/></geometry>
+      </collision>
+      <collision>
+        <origin xyz="-0.20 -0.70 -0.15" rpy="0 0 0"/>
+        <geometry><box size="2.20 0.10 1.10"/></geometry>
+      </collision>
+    </link>
+    <xacro:insert_block name="gazebo"/>
+  </xacro:macro>
+    <xacro:macro name="nezha_hydro_model" params="namespace">
+        <link name="${namespace}/base_link">
+            <neutrally_buoyant>0</neutrally_buoyant>
+            <volume>${volume}</volume>
+            <box>
+                <width>1.5</width>
+                <length>2.6</length>
+                <height>1.6</height>
+            </box>
+            <center_of_buoyancy>${cob}</center_of_buoyancy>
+            <hydrodynamic_model>
+                <type>fossen</type>
+                <!-- Added mass: see p.28 in Berg2012 -->
+                <added_mass>
+                     779.79 -6.8773 -103.32  8.5426 -165.54 -7.8033
+                    -6.8773    1222   51.29  409.44 -5.8488  62.726
+                    -103.32   51.29  3659.9  6.1112 -386.42  10.774
+                     8.5426  409.44  6.1112   534.9 -10.027  21.019
+                    -165.54 -5.8488 -386.42 -10.027  842.69 -1.1162
+                    -7.8033  62.726  10.775  21.019 -1.1162  224.32
+                </added_mass>
+                <!-- Linear damping: see p.31 in Berg2012 -->
+                <linear_damping>
+                    -74.82 -69.48 -728.4 -268.8 -309.77 -105
+                </linear_damping>
+                <!-- Non-linear damping: see p.30 in Berg2012 -->
+                <quadratic_damping>
+                    -748.22 -992.53 -1821.01 -672 -774.44 -523.27
+                </quadratic_damping>
+            </hydrodynamic_model>
+        </link>
+    </xacro:macro>
+
+<xacro:macro name="paddle"
+    params="robot_namespace parent mass_paddle paddle_number color use_own_mesh mesh rotor_constant dyn_time_constant scale *origin *inertia" >
+    <joint name="${robot_namespace}/paddle_${paddle_number}_joint" type="continuous">
+      <xacro:insert_block name="origin" />
+      <axis xyz="1 0 0" />
+      <parent link="${parent}" />
+      <child link="${robot_namespace}/paddle_${paddle_number}" />
+    </joint>
+    <link name="${robot_namespace}/paddle_${paddle_number}">
+      <inertial>
+        <mass value="${mass_paddle}" /> <!-- [kg] -->
+        <xacro:insert_block name="inertia" />
+      </inertial>
+      <visual>
+        <geometry>
+          <xacro:if value="${use_own_mesh}">
+            <mesh filename="${mesh}"
+              scale="${scale}" /> <!-- 修改点：使用传入的 scale 参数 -->
+          </xacro:if>
+          <xacro:unless value="${use_own_mesh}">
+            <mesh filename="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+              scale="${radius_paddle} ${radius_paddle} ${radius_paddle}" />
+          </xacro:unless>
+        </geometry>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder length="0.00005" radius="${radius_paddle}" /> <!-- [m] -->
+        </geometry>
+      </collision>
+    </link>
+    <gazebo reference="${robot_namespace}/paddle_${paddle_number}">
+      <material>Gazebo/${color}</material>
+    </gazebo>
+    <gazebo>
+      <plugin name="${robot_namespace}_${paddle_number}_thruster_model" filename="libuuv_thruster_ros_plugin.so">
+        <linkName>${robot_namespace}/paddle_${paddle_number}</linkName>
+        <jointName>${robot_namespace}/paddle_${paddle_number}_joint</jointName>
+        <thrusterID>${paddle_number}</thrusterID>
+        <xacro:rotor_dyn_first_order_macro time_constant="${dyn_time_constant}"/>
+        <xacro:thruster_cf_basic_macro rotor_constant="${rotor_constant}"/>
+      </plugin>
+    </gazebo>
+</xacro:macro>
+
+  <!-- Default joint state publisher -->
+  <xacro:macro name="default_joint_state_publisher" params="namespace update_rate">
+    <gazebo>
+      <plugin name="uuv_joint_state_publisher" filename="libuuv_joint_state_publisher.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <updateRate>${update_rate}</updateRate>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+</robot>
+

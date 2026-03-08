@@ -1,0 +1,64 @@
+<launch>
+  <!-- ===== 通用参数（保持原有） ===== -->
+  <arg name="world_name" default="nezha_ocean"/>
+  <arg name="debug"      default="false"/>
+  <arg name="gui"        default="true"/>
+  <arg name="paused"     default="false"/>
+  <arg name="verbose"    default="false"/>
+
+  <!-- xacro 文件路径 -->
+  <arg name="rig_xacro"  default="$(find nezha_gazebo)/models/test_rig/test_rig.xacro"/>
+  <arg name="rocket_xacro" default="$(find nezha_gazebo)/models/nezha_rocket/nezha_rocket.xacro"/>
+
+  <!-- ===== test_rig 初始位姿 ===== -->
+  <arg name="rig_x"     default="0.0"/>
+  <arg name="rig_y"     default="0.0"/>
+  <arg name="rig_z"     default="1.0"/>
+  <arg name="rig_roll"  default="0.0"/>
+  <arg name="rig_pitch" default="0.0"/>
+  <arg name="rig_yaw"   default="0.0"/>
+
+  <!-- ===== test_body 初始位姿（可按需修改开距） ===== -->
+  <arg name="body_x"     default="0.0"/>
+  <arg name="body_y"     default="0.5"/>
+  <arg name="body_z"     default="-0.2"/>
+  <arg name="body_roll"  default="0.0"/>
+  <arg name="body_pitch" default="0.0"/>
+  <arg name="body_yaw"   default="0.0"/>
+
+  <!-- ===== 1) 先启动世界 ===== -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/$(arg world_name).world"/>
+    <arg name="debug"      value="$(arg debug)"/>
+    <arg name="paused"     value="$(arg paused)"/>
+    <arg name="gui"        value="$(arg gui)"/>
+    <arg name="verbose"    value="$(arg verbose)"/>
+  </include>
+
+  <!-- ===== 2) 加载 test_rig ===== -->
+  <group ns="test_rig">
+    <!-- robot_description -->
+    <param name="robot_description"
+           command="$(find xacro)/xacro --inorder $(arg rig_xacro)"/>
+
+    <!-- 向 Gazebo 注入 -->
+    <node pkg="gazebo_ros" type="spawn_model" name="spawn_test_rig" output="screen"
+          args="-urdf -param robot_description -model test_rig
+                -x $(arg rig_x) -y $(arg rig_y) -z $(arg rig_z)
+                -R $(arg rig_roll) -P $(arg rig_pitch) -Y $(arg rig_yaw)"/>
+
+    <!-- ros_control PID（示例，仅 rod_slide 关节） -->
+    <rosparam ns="gazebo_ros_control/pid_gains">
+      rod_slide:
+        p: 100.0
+        i: 0.0
+        d: 1.0
+        i_clamp: 0.0
+    </rosparam>
+  </group>
+
+
+</launch>
+
+   
+

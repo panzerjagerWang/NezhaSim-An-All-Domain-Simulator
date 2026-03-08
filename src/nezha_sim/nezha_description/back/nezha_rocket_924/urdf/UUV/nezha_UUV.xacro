@@ -1,0 +1,67 @@
+<?xml version="1.0"?>
+<robot name="nezha_rocket" xmlns:xacro="http://www.ros.org/wiki/xacro" >
+<xacro:include filename="$(find nezha_description)/$(arg namespace)/urdf/UUV/thruster_snippets.xacro"/>
+<!--<xacro:include filename="$(find nezha_description)/$(arg namespace)/urdf/UUV/sensors.xacro"/>-->
+<xacro:property name="prop_mesh_file" value="file://$(find nezha_description)/$(arg namespace)/meshes/paddle_1_link.STL"/>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="0"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}">
+    <origin xyz="0 -${arm_length_front_y} ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="1"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}">
+    <origin xyz="-${arm_length_back_x} 0 ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="2"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}"
+    >
+
+    <origin xyz="0 ${arm_length_front_y} ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+  <xacro:paddle robot_namespace="${namespace}"
+    parent="${namespace}/base_link"
+    mass_paddle="${mass_paddle}"
+    paddle_number="3"
+    color="Red"
+    use_own_mesh="true"
+    dyn_time_constant="0.05"
+    rotor_constant="0.00837"
+    mesh="$(find nezha_description)/${namespace}/meshes/paddle_1_link.STL"
+    scale="${radius_paddle} ${radius_paddle} ${radius_paddle}">
+    <origin xyz="${arm_length_back_x} 0 ${paddle_offset_top}" rpy="0 1.57 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:paddle>
+
+
+</robot>

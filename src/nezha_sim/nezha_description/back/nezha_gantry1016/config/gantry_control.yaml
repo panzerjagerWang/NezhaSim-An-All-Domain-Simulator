@@ -1,0 +1,25 @@
+joint_state_controller:
+  type: joint_state_controller/JointStateController
+  publish_rate: 50
+
+horizontal_position_controller:
+  type: effort_controllers/JointPositionController
+  joint: horizontal_slider_joint
+  pid: {p: 400.0, i: 0.1, d: 40.0, i_clamp_min: -10.0, i_clamp_max: 10.0}
+
+vertical_position_controller:
+  type: effort_controllers/JointPositionController
+  joint: vertical_lift_joint
+  pid: {p: 600.0, i: 0.1, d: 60.0, i_clamp_min: -10.0, i_clamp_max: 10.0}
+
+left_finger_controller:
+  type: effort_controllers/JointPositionController
+  joint: left_finger_joint
+  pid: {p: 200.0, i: 0.05, d: 20.0, i_clamp_min: -5.0, i_clamp_max: 5.0}
+
+right_finger_controller:
+  type: effort_controllers/JointPositionController
+  joint: right_finger_joint
+  pid: {p: 200.0, i: 0.05, d: 20.0, i_clamp_min: -5.0, i_clamp_max: 5.0}
+
+

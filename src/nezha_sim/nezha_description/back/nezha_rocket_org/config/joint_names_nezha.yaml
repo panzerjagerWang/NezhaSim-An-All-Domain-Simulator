@@ -1,0 +1,1 @@
+controller_joint_names: ['', 'rotor_0_joint', 'rotor_1_joint', 'rotor_2_joint', 'rotor_3_joint', 'paddle_0_joint', 'paddle_1_joint', 'paddle_2_joint', 'motor_0_joint', 'motor_1_joint', 'motor_2_joint', 'motor_3_joint', ]

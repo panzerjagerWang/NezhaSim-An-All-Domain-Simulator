@@ -1,0 +1,180 @@
+<?xml version="1.0"?>
+<robot name="underwater_spotlight_gimbal_macro" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- 宏：可挂载到任意父链接 -->
+  <xacro:macro name="spotlight_gimbal" params="
+      parent_link
+      prefix:=''
+      ns:='/spotlight'
+      mount_xyz:='0 0 0'
+      mount_rpy:='0 0 0'
+      use_ignition:='false'">
+
+    <!-- 材质 -->
+    <material name="${prefix}Grey"><color rgba="0.6 0.6 0.6 1.0"/></material>
+    <material name="${prefix}DarkGrey"><color rgba="0.3 0.3 0.3 1.0"/></material>
+
+    <!-- 1) base_link（改名并通过固定关节挂到 parent_link） -->
+    <link name="${prefix}base_link">
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="1.0"/>
+        <inertia ixx="0.01" ixy="0" ixz="0" iyy="0.01" iyz="0" izz="0.01"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.3" length="0.2"/></geometry>
+        <material name="${prefix}Grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.1" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.3" length="0.2"/></geometry>
+      </collision>
+    </link>
+
+    <!-- 安装固定关节：将 base_link 固定到外部提供的 parent_link 上 -->
+    <joint name="${prefix}mount_joint" type="fixed">
+      <parent link="${parent_link}"/>
+      <child link="${prefix}base_link"/>
+      <origin xyz="${mount_xyz}" rpy="${mount_rpy}"/>
+    </joint>
+
+    <!-- 2) yaw_link -->
+    <link name="${prefix}yaw_link">
+      <inertial>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <mass value="0.5"/>
+        <inertia ixx="0.005" ixy="0" ixz="0" iyy="0.005" iyz="0" izz="0.005"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.28" length="0.06"/></geometry>
+        <material name="${prefix}DarkGrey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.2" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.28" length="0.06"/></geometry>
+      </collision>
+    </link>
+
+    <!-- 3) pitch_link -->
+    <link name="${prefix}pitch_link">
+      <inertial>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <mass value="0.3"/>
+        <inertia ixx="0.003" ixy="0" ixz="0" iyy="0.003" iyz="0" izz="0.003"/>
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <geometry><box size="0.06 0.5 0.06"/></geometry>
+        <material name="${prefix}Grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <geometry><box size="0.06 0.5 0.06"/></geometry>
+      </collision>
+    </link>
+
+    <!-- 4) spotlight_link（灯体） -->
+    <link name="${prefix}spotlight_link">
+      <inertial>
+        <origin xyz="0 0 0.26" rpy="0 0 0"/>
+        <mass value="1.0"/>
+        <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.02"/>
+      </inertial>
+      <visual>
+        <!-- 长度5.0，中心在2.5；在pitch_link基准上抬0.26，总 2.76 -->
+        <origin xyz="0 0 2.76" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.2" length="5.0"/></geometry>
+        <material name="${prefix}Grey"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 2.76" rpy="0 0 0"/>
+        <geometry><cylinder radius="0.2" length="5.0"/></geometry>
+      </collision>
+    </link>
+
+    <!-- joints -->
+    <joint name="${prefix}base_yaw_joint" type="revolute">
+      <parent link="${prefix}base_link"/>
+      <child link="${prefix}yaw_link"/>
+      <origin xyz="0 0 0.2" rpy="0 0 0"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="-3.14159" upper="3.14159" effort="10" velocity="2.0"/>
+      <dynamics damping="0.1" friction="0.0"/>
+    </joint>
+
+    <joint name="${prefix}head_pitch_joint" type="revolute">
+      <parent link="${prefix}yaw_link"/>
+      <child link="${prefix}pitch_link"/>
+      <origin xyz="0 0 0.06" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="-1.2" upper="1.2" effort="10" velocity="2.0"/>
+      <dynamics damping="0.1" friction="0.0"/>
+    </joint>
+
+    <joint name="${prefix}pitch_to_spotlight" type="fixed">
+      <parent link="${prefix}pitch_link"/>
+      <child link="${prefix}spotlight_link"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <!-- Gazebo 控制插件（命名空间可配） -->
+    <gazebo>
+      <plugin name="${prefix}gazebo_ros_control" filename="libgazebo_ros_control.so">
+        <robotNamespace>${ns}</robotNamespace>
+      </plugin>
+    </gazebo>
+
+    <!-- transmissions（Effort 接口） -->
+    <transmission name="${prefix}base_yaw_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}base_yaw_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}base_yaw_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <transmission name="${prefix}head_pitch_trans">
+      <type>transmission_interface/SimpleTransmission</type>
+      <joint name="${prefix}head_pitch_joint">
+        <hardwareInterface>hardware_interface/EffortJointInterface</hardwareInterface>
+      </joint>
+      <actuator name="${prefix}head_pitch_motor">
+        <mechanicalReduction>1</mechanicalReduction>
+      </actuator>
+    </transmission>
+
+    <!-- Gazebo 材质与灯光 -->
+    <gazebo reference="${prefix}base_link"><material>Gazebo/Grey</material></gazebo>
+    <gazebo reference="${prefix}yaw_link"><material>Gazebo/DarkGrey</material></gazebo>
+    <gazebo reference="${prefix}pitch_link"><material>Gazebo/Grey</material></gazebo>
+    <gazebo reference="${prefix}spotlight_link">
+      <material>Gazebo/Grey</material>
+
+      <light name="${prefix}spotlight_beam" type="spot">
+        <pose>0 0 0.3 0 0 0</pose>
+        <diffuse>1 1 1 1</diffuse>
+        <specular>0.3 0.3 0.3 1</specular>
+        <attenuation>
+          <range>30</range>
+          <constant>0.2</constant>
+          <linear>0.01</linear>
+          <quadratic>0.001</quadratic>
+        </attenuation>
+        <direction>0 0 1</direction>
+        <spot>
+          <inner_angle>0.2</inner_angle>
+          <outer_angle>0.7</outer_angle>
+          <falloff>0.7</falloff>
+        </spot>
+        <cast_shadows>true</cast_shadows>
+      </light>
+    </gazebo>
+
+  </xacro:macro>
+</robot>
+
+

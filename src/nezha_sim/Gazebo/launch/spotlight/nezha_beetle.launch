@@ -1,0 +1,117 @@
+<launch>
+  <!-- 通用参数 -->
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="true"/>
+  <arg name="verbose" default="false"/>
+  <arg name="debug" default="false"/>
+
+  <!-- 世界选择 -->
+  <arg name="world_name" default="nezha_lake"/>
+
+  <!-- UAV 命名空间与选项 -->
+  <arg name="uav_ns" default="nezha_beetle"/>
+  <arg name="uav_enable_logging" default="false"/>
+  <arg name="uav_enable_ground_truth" default="true"/>
+
+  <!-- UUV 命名空间与选项 -->
+  <arg name="uuv_ns" default="rexrov"/>
+  <arg name="uuv_mode" default="spotlight"/>
+  <arg name="uuv_use_ned_frame" default="false"/>
+  <arg name="uuv_x" default="0"/>
+  <arg name="uuv_y" default="0"/>
+  <arg name="uuv_z" default="-20"/>
+  <arg name="uuv_roll" default="0.0"/>
+  <arg name="uuv_pitch" default="0.0"/>
+  <arg name="uuv_yaw" default="0.0"/>
+
+  <!-- 环境路径并集（可按需调整） -->
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find uuv_gazebo_worlds)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models:$(find uuv_gazebo_worlds)/worlds:$(find uuv_gazebo_worlds)/models"/>
+
+  <!-- 只启动一次 Gazebo，使用同一个 lake.world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/$(arg world_name).world"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+  </include>
+
+  <!-- UUV 相关：世界坐标、Lake 网格、TF -->
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+  <node name="publish_world_models"
+        pkg="uuv_assistants"
+        type="publish_world_models.py"
+        output="screen">
+    <rosparam subst_value="true">
+      meshes:
+        lake:
+          mesh: package://uuv_gazebo_worlds/models/lake/meshes/LakeBottom.dae
+          model: lake
+    </rosparam>
+  </node>
+
+  <!-- UUV 机器人组 -->
+  <group ns="$(arg uuv_ns)">
+    <group unless="$(arg uuv_use_ned_frame)">
+      <param name="robot_description"
+             command="$(find xacro)/xacro '$(find nezha_description)/rexrov_$(arg uuv_mode)/urdf/rexrov_$(arg uuv_mode).xacro'
+               debug:=$(arg debug)
+               namespace:=$(arg uuv_ns)
+               inertial_reference_frame:=world" />
+    </group>
+    <group if="$(arg uuv_use_ned_frame)">
+      <param name="robot_description"
+             command="$(find xacro)/xacro '$(find nezha_description)/rexrov_$(arg uuv_mode)/urdf/rexrov_$(arg uuv_mode).xacro'
+               debug:=$(arg debug)
+               namespace:=$(arg uuv_ns)
+               inertial_reference_frame:=world_ned" />
+    </group>
+
+    <!-- 控制器参数与生成 -->
+    <rosparam file="$(find nezha_description)/rexrov_$(arg uuv_mode)/config/spotlight_macros_controllers.yaml" command="load"/>
+
+    <node name="urdf_spawner" pkg="uuv_descriptions" type="spawn_model" respawn="false" output="screen"
+          args="-urdf -x $(arg uuv_x) -y $(arg uuv_y) -z $(arg uuv_z) -R $(arg uuv_roll) -P $(arg uuv_pitch) -Y $(arg uuv_yaw) -model $(arg uuv_ns) -param robot_description"/>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen">
+      <param name="publish_frequency" value="50" />
+    </node>
+
+    <node name="controller_spawner" pkg="controller_manager" type="spawner"
+          args="spotlight/joint_state_controller spotlight/base_yaw_position spotlight/head_pitch_position"/>
+  </group>
+
+  <!-- 将 /rexrov/base_link 挂到 world 的 TF（如果需要） -->
+  <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+    <arg name="namespace" value="$(arg uuv_ns)"/>
+    <arg name="world_frame" value="world"/>
+    <arg name="child_frame_id" value="/$(arg uuv_ns)/base_link"/>
+  </include>
+
+  <!-- UAV 机器人组 -->
+  <group ns="$(arg uav_ns)">
+    <!-- 生成并加载多旋翼 -->
+    <include file="$(find rotors_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg uav_ns)" />
+      <arg name="model" value="$(find nezha_description)/$(arg uav_ns)/config/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="$(arg uav_enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg uav_enable_ground_truth)" />
+      <arg name="log_file" value="$(arg uav_ns)"/>
+    </include>
+
+    <!-- 控制器与示例 -->
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">
+      <rosparam command="load" file="$(find nezha_description)/$(arg uav_ns)/config/lee_controller_$(arg uav_ns).yaml" />
+      <rosparam command="load" file="$(find nezha_description)/$(arg uav_ns)/config/$(arg uav_ns).yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+    </node>
+    <node name="hovering_example" pkg="rotors_gazebo" type="hovering_example" output="screen"/>
+
+    <!-- 状态发布 -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+</launch>
+
+

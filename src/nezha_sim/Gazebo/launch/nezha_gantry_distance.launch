@@ -1,0 +1,117 @@
+<?xml version="1.0"?>
+<launch>
+  <!-- ==================== 通用参数 ==================== -->
+  <arg name="rack_name" default="nezha_gantry"/>
+  <arg name="namespace" default="nezha_rocket"/>
+  <arg name="paused" default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="headless" default="false"/>
+  <arg name="debug" default="false"/>
+  <arg name="verbose" default="false"/>
+  
+
+  <!-- ==================== UAV 相关参数 ==================== -->
+  <arg name="enable_mavlink_interface" default="false"/>
+  <arg name="uav_log_file" default="$(arg namespace)"/>
+  <arg name="wait_to_record_bag" default="false"/>
+  <arg name="uav_enable_logging" default="false"/>
+  <arg name="uav_enable_ground_truth" default="false"/>
+
+  <!-- ==================== 1. 启动 Gazebo ==================== -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="worlds/empty.world"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+    <arg name="headless" value="$(arg headless)"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+  </include>
+
+  <!-- ==================== 2. 加载龙门架 URDF ==================== -->
+  <param name="robot_description"
+         command="$(find xacro)/xacro $(find nezha_description)/$(arg rack_name)/nezha_gantry.xacro"/>
+
+  <!-- ==================== 3. 发布龙门架状态 ==================== -->
+  <node name="robot_state_publisher" 
+        pkg="robot_state_publisher" 
+        type="robot_state_publisher" 
+        output="screen">
+    <param name="publish_frequency" value="50.0"/>
+  </node>
+
+  <!-- 注意：如果你的龙门架有控制器，通常不需要 joint_state_publisher -->
+  <!-- <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher">
+    <param name="use_gui" value="false"/>
+  </node> -->
+
+  <!-- ==================== 4. 生成龙门架模型 ==================== -->
+  <node name="spawn_gantry" 
+        pkg="gazebo_ros" 
+        type="spawn_model"
+        args="-urdf -param robot_description -model gantry_robot -z 0.05"
+        respawn="false" 
+        output="screen"/>
+
+  <!-- ==================== 5. 龙门架控制器 ==================== -->
+  <group ns="gantry">
+    <!-- 加载控制器参数 -->
+    <rosparam file="$(find nezha_description)/$(arg rack_name)_distance/config/gantry_control.yaml" 
+              command="load"/>
+      <node name="controller_spawner" 
+            pkg="controller_manager" 
+            type="spawner"
+            respawn="false" 
+            output="screen"
+            args="joint_state_controller
+                  horizontal_position_controller
+                  vertical_position_controller
+                  left_finger_controller
+                  right_finger_controller"/>
+      <param name="control_mode" value="position"/>
+  </group>
+
+  <!-- ==================== 6. UAV 启动 ==================== -->
+  <group ns="$(arg namespace)">
+    <include file="$(find nezha_gazebo)/launch/spawn_mav_motified.launch">
+      <arg name="mav_name" value="$(arg namespace)"/>
+      <arg name="namespace" value="$(arg namespace)"/>
+      <arg name="model" value="$(find nezha_description)/$(arg namespace)/config/mav_generic_odometry_sensor.gazebo"/>
+
+      <arg name="enable_logging" value="$(arg uav_enable_logging)"/>
+      <arg name="enable_ground_truth" value="$(arg uav_enable_ground_truth)"/>
+      <arg name="log_file" value="$(arg uav_log_file)"/>
+      <arg name="wait_to_record_bag" value="$(arg wait_to_record_bag)"/>
+      <arg name="enable_mavlink_interface" value="$(arg enable_mavlink_interface)"/>
+
+      <arg name="x" value="0.0"/>
+      <arg name="y" value="0.0"/>
+      <arg name="z" value="1.3"/>
+    </include>
+
+    <!-- UAV 控制器 -->
+    <node name="lee_position_controller_node" 
+          pkg="rotors_control" 
+          type="lee_position_controller_node" 
+          output="screen">
+      <rosparam command="load" file="$(find nezha_description)/$(arg namespace)/config/lee_controller_$(arg namespace).yaml"/>
+      <rosparam command="load" file="$(find nezha_description)/$(arg namespace)/config/$(arg namespace).yaml"/>
+      <remap from="odometry" to="odometry_sensor1/odometry"/>
+    </node>
+
+    <node name="hovering_example" 
+          pkg="rotors_gazebo" 
+          type="hovering_example" 
+          output="screen"/>
+
+    <!-- UAV 状态发布器 -->
+    <node name="robot_state_publisher" 
+          pkg="robot_state_publisher" 
+          type="robot_state_publisher" 
+          output="screen"/>
+  </group>
+
+</launch>
+
+

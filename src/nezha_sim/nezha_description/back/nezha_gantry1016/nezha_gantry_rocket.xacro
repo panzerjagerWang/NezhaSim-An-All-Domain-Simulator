@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="gantry_with_drone">
+
+  <!-- 参数定义 -->
+  <xacro:arg name="rack_name" default="nezha_gantry"/>
+  
+  <!-- ==================== 包含力架模型 ==================== -->
+  <xacro:include filename="$(find nezha_description)/$(arg rack_name)/nezha_gantry.xacro" />
+  
+  <!-- ==================== 包含无人机模型 ==================== -->
+  <!-- 注意：根据您的实际文件路径调整 -->
+  <xacro:include filename="$(find nezha_description)/$(arg namespace)/nezha_rocket_base.xacro" />
+  
+  <!-- ==================== 无人机抓取点 ==================== -->
+  <!-- 在无人机顶部添加抓取杆 -->
+  <link name="drone_gripper_handle">
+    <visual>
+      <geometry>
+        <!-- 横向抓取杆，便于夹钳从两侧夹持 -->
+        <cylinder radius="0.015" length="0.06"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>  <!-- 旋转90度使其横向 -->
+      <material name="handle_gray">
+        <color rgba="0.7 0.7 0.7 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.015" length="0.06"/>
+      </geometry>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+    </collision>
+    <inertial>
+      <mass value="0.05"/>
+      <origin xyz="0 0 0" rpy="0 1.5708 0"/>
+      <inertia ixx="0.00002" ixy="0.0" ixz="0.0" 
+               iyy="0.00001" iyz="0.0" izz="0.00002"/>
+    </inertial>
+  </link>
+  
+  <!-- 将抓取杆固定在无人机顶部 -->
+  <joint name="drone_to_handle" type="fixed">
+    <parent link="base_link"/>  <!-- 无人机的主体link -->
+    <child link="drone_gripper_handle"/>
+    <!-- 调整高度，使抓取杆在无人机顶部中心 -->
+    <origin xyz="0 0 0.12" rpy="0 0 0"/>
+  </joint>
+  
+  <!-- ==================== 无人机初始位置 ==================== -->
+  <!-- 将无人机放置在力架工作区域内 -->
+  <joint name="world_to_drone_base" type="floating">
+    <parent link="world"/>
+    <child link="base_link"/>  <!-- 无人机的base_link -->
+    <!-- 初始位置：在力架下方，便于抓取 -->
+    <origin xyz="0.0 0.0 1.3" rpy="0 0 0"/>
+  </joint>
+  
+  <!-- ==================== 可选：添加停机坪 ==================== -->
+  <link name="landing_pad">
+    <visual>
+      <geometry>
+        <cylinder radius="0.5" length="0.02"/>
+      </geometry>
+      <material name="pad_color">
+        <color rgba="0.2 0.2 0.2 1.0"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.5" length="0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="5.0"/>
+      <inertia ixx="0.5" ixy="0.0" ixz="0.0" 
+               iyy="0.5" iyz="0.0" izz="0.5"/>
+    </inertial>
+  </link>
+  
+  <joint name="world_to_pad" type="fixed">
+    <parent link="world"/>
+    <child link="landing_pad"/>
+    <origin xyz="0.0 0.0 0.01" rpy="0 0 0"/>
+  </joint>
+  
+  <!-- ==================== 可选：添加目标放置区 ==================== -->
+  <link name="target_zone">
+    <visual>
+      <geometry>
+        <cylinder radius="0.4" length="0.02"/>
+      </geometry>
+      <material name="target_color">
+        <color rgba="0.0 0.8 0.0 0.5"/>
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <cylinder radius="0.4" length="0.02"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="3.0"/>
+      <inertia ixx="0.3" ixy="0.0" ixz="0.0" 
+               iyy="0.3" iyz="0.0" izz="0.3"/>
+    </inertial>
+  </link>
+  
+  <joint name="world_to_target" type="fixed">
+    <parent link="world"/>
+    <child link="target_zone"/>
+    <origin xyz="1.2 0.0 0.01" rpy="0 0 0"/>
+  </joint>
+
+</robot>
+
