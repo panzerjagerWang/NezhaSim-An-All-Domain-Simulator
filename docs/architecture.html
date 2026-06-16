@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Architecture — NezhaSim</title>
+<meta name="description" content="The NezhaSim architecture: Phase Switch Console, LEAP empirical pipeline, Mechanical Transparency, and the unified cross-domain physics engine.">
+<link rel="icon" href="assets/img/logo.gif">
+<link rel="stylesheet" href="assets/css/style.css">
+<script>
+  window.MathJax = { tex: { inlineMath: [['\\(','\\)']], displayMath: [['$$','$$']] } };
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="index.html"><img src="assets/img/logo.gif" alt="NezhaSim logo"><span>Nezha<b>Sim</b></span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="installation.html">Install</a>
+      <a href="tutorials.html">Tutorials</a>
+      <a href="architecture.html" class="active">Architecture</a>
+      <a href="robots.html">Robots &amp; Worlds</a>
+      <a href="index.html#cite">Cite</a>
+      <a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+  <div class="page-head">
+    <div class="eyebrow">Under the hood</div>
+    <h1>Architecture</h1>
+  </div>
+  <p class="lead">NezhaSim establishes a unified cross-domain physics engine by refactoring four mature
+     single-domain simulators and coordinating them through three new components.</p>
+
+  <h2>The unified physics engine</h2>
+  <p>NezhaSim does not replace high-fidelity CFD or first-principles multiphase solvers. It is a
+     practical <b>system-level integration layer</b> where selected hard-to-model phenomena are
+     approximated by data-derived plugins for real-time prototyping and control validation. Four
+     upstream backends are rewritten behind standardized force interfaces:</p>
+  <div class="cards">
+    <div class="card"><div class="ico">🚁</div><h3>RotorS</h3><p>Aerial rigid-body and rotor model for the air domain.</p></div>
+    <div class="card"><div class="ico">🐟</div><h3>UUV Simulator</h3><p>6-DOF Fossen underwater hydrodynamics.</p></div>
+    <div class="card"><div class="ico">🌊</div><h3>ASV-Wave</h3><p>Spectral surface-wave mechanics &amp; buoyancy grid.</p></div>
+    <div class="card"><div class="ico">🛞</div><h3>Husky</h3><p>UGV ground interaction and wheel dynamics.</p></div>
+  </div>
+
+  <h3>Where the transmedium physics lives — in the air, right above the water</h3>
+  <p>The two hardest-to-model effects both act in the thin band <i>above and across</i> the water
+     surface, while the vehicle is still partly or wholly <b>in the air</b>:</p>
+  <ul class="feature-list">
+    <li><b>Near-Surface Effect (NSE)</b> — when the rotors hover close to the water <i>in air</i>, the
+        downwash recirculates off the (deformable, moving) surface and changes the thrust and torque
+        coefficients \(K_T, K_Q\). This is an <i>aerodynamic</i> effect that only appears near the
+        surface, so it is computed by the motor-response plugin from the live propeller state.</li>
+    <li><b>Transmedium Resistance (TR)</b> — during the air ⇄ water crossing the body experiences
+        slamming, added-mass and cavity drag. The TR plugin produces the resistance force \(F_R\) that
+        opposes the water-exit / water-entry maneuver.</li>
+  </ul>
+  <figure>
+    <img src="assets/img/nse_tr_impl.png" alt="NSE and TR plugin pipeline at the water surface">
+    <figcaption><b>NSE and TR in the near-surface / air region.</b> The Transmedium-Resistance plugin
+      ingests the contact-surface (CM) drag area, velocity and normalized depth \(L/Z\) to output the
+      resistance \(F_R\); the Near-Surface-Effect plugin ingests propeller radius and throttle ratio to
+      output the in-air thrust coefficient \(T\). Both are driven every step by the real-time wave
+      surface, not the mean water level.</figcaption>
+  </figure>
+
+  <!-- ===================================================== PSC -->
+  <h2 id="psc">1 · Phase Switch Console (PSC) — the smooth wave transition</h2>
+  <p>The PSC is the component that makes the air ⇄ water crossing <b>smooth</b>. The headline change is
+     how the vehicle's hydrodynamic wrench is composed at the surface. We replaced the baseline's rigid
+     plugin switching with a single plugin that <i>blends</i> two force models through a transition band.
+     The change is grounded in source — here is exactly what was rewritten.</p>
+
+  <h3>The baseline: a rigid, single-frame switch (force spike by construction)</h3>
+  <p>The old simulator owned the vehicle wrench in two separate Gazebo plugins — a surface (mesh)
+     plugin and an underwater (Fossen) plugin — that were <i>never</i> active at the same time. A
+     <code>PhaseSwitchPlugin</code> polled a ROS phase service and, on each transition, toggled whole
+     plugins on or off <span class="csite">nezha_phaseSwitchPlugin.cc:440</span>. The force the body
+     received was therefore a piecewise function of phase:</p>
+  <div class="eq">$$ \mathbf{F}_{\text{baseline}}(t)=
+     \begin{cases}
+       \mathbf{F}_{\text{mesh}}(t), &amp; \text{phase}\in\{\text{SURFACE, ENTRY, EXIT}\},\\
+       \mathbf{F}_{\text{Fossen}}(t), &amp; \text{phase}=\text{BELOW},\\
+       \mathbf{0}, &amp; \text{phase}=\text{ABOVE}.
+     \end{cases} $$</div>
+  <p>At the instant of a crossing \(t^\star\) the two models disagree by a finite amount, so the applied
+     force <i>jumps</i> — a Dirac-like impulse into the rigid-body solver:</p>
+  <div class="eq">$$ \Delta\mathbf{F}= \mathbf{F}_{\text{Fossen}}(t^\star)-\mathbf{F}_{\text{mesh}}(t^\star)\neq\mathbf{0}. $$</div>
+  <p>The switch was strictly a step, not a ramp: the transition filter was forced to zero frames
+     <span class="csite">:177</span>, the "below" handler had to actively erase the residual force the
+     just-disabled surface plugin left behind (and warned when it could not) <span class="csite">:385</span>,
+     and the learned drag hard-selected an entry/exit/above coefficient set by phase label
+     <span class="csite">nezha_transmediaDragPlugin.cc:343</span>. A step in force becomes a step in
+     acceleration; at speed the buoyancy step also becomes a torque step that spins the body — the
+     classic "launch out of the water" divergence.</p>
+
+  <h3>The fix: one plugin, continuous submergence-weighted blend</h3>
+  <p>The new <code>NezhaUnifiedHydrodynamicsPlugin</code> discards the state machine. Every physics step
+     it computes the signed submergence of the body centre against the <i>sampled wave surface</i>
+     \(\eta\), and maps it through a band one full body-height \(2h\) wide into a weight
+     \(w\in[0,1]\) <span class="csite">nezha_unified_plugin.cc:529</span>:</p>
+  <div class="eq">$$ d=\eta - z,\qquad
+     w=\operatorname{clamp}\!\left(\frac{d+h}{2h},\,0,\,1\right),\qquad
+     \begin{cases} w=0 &amp; \text{body top at surface (airborne)}\\ w=1 &amp; \text{fully submerged.}\end{cases} $$</div>
+  <p>Both models run every step and are summed with <i>complementary</i> weights — the mesh force fades
+     out exactly as the Fossen force fades in — plus a dedicated heave (entry-drag) term
+     <span class="csite">:673, :692</span>:</p>
+  <div class="eq">$$ \mathbf{F}_{\text{unified}}(t)=\underbrace{(1-w)\,\mathbf{F}_{\text{mesh}}(t)}_{\text{fades out}}
+     +\underbrace{w\,\mathbf{F}_{\text{Fossen}}(t)}_{\text{fades in}}+\mathbf{F}_{\text{heave}}(t). $$</div>
+  <p>Because \(w(d)\) is continuous and \(w\to1\) exactly when \((1-w)\to0\), the one-sided limits at any
+     depth agree — the spike is gone <i>by construction</i>, with no enable/disable event at which a
+     whole force model appears or vanishes:</p>
+  <div class="eq">$$ \lim_{d\to d^{\star-}}\mathbf{F}_{\text{unified}}=\lim_{d\to d^{\star+}}\mathbf{F}_{\text{unified}},\qquad \Delta\mathbf{F}=\mathbf{0}. $$</div>
+
+  <div class="fig-row">
+    <figure>
+      <img src="assets/img/psc_force_measured.png" alt="Measured force vs body height: rigid switch step vs continuous blend">
+      <figcaption><b>Measured from real Gazebo rosbags.</b> The baseline (rigid, gated switch) injects a
+        ~10.1&nbsp;N step the instant the surface is crossed; the unified continuous blend produces a
+        smooth force-vs-height curve. <i>Right:</i> the two plugins disagree at the boundary, and only
+        one is ever active on each side of \(z=0\).</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/img/psc_vs_pscrs.png" alt="PSC vs PSC-RS applied vertical force across submersion ratio">
+      <figcaption><b>Quasi-static trans-media test (via MT).</b> The rigid-switch baseline (PSC-RS) jumps
+        \(\Delta F\approx 8.5\)&nbsp;N at the threshold; the PSC blend rises monotonically, with a largest
+        adjacent-level step of only ~1.3&nbsp;N.</figcaption>
+    </figure>
+  </div>
+
+  <h3>Three additional, independent bounds on the peak force</h3>
+  <p>Beyond \(C^0\) continuity, the unified plugin makes the entry transient <i>provably bounded</i> at
+     any crossing speed:</p>
+  <ol class="feature-list">
+    <li><b>Impact-velocity saturation</b> — the velocity fed to the drag model
+        (\(\propto v, v^2\)) is clamped to \(\pm 5\) m/s before the force is computed
+        <span class="csite">:622</span>, with the spin feedback clamped to \(10\) rad/s
+        <span class="csite">:633</span>.</li>
+    <li><b>Quadratic entry drag</b> — a heave term \(F_z=-(c\,v_z+k\,|v_z|v_z)\) dissipates water-entry
+        kinetic energy so the body plunges and settles instead of bouncing <span class="csite">:768</span>.</li>
+    <li><b>Final wrench saturation</b> — force <i>and</i> torque are component-clamped
+        (\(F\le 200\) N, \(\tau\le 50\) N·m) before being applied, closing the rotational feedback loop
+        the baseline left open <span class="csite">:832</span>. A non-finite / out-of-range state guard
+        <span class="csite">:441</span> additionally vetoes force application on garbage state.</li>
+  </ol>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th></th><th>Baseline (rigid switch)</th><th>Unified plugin (PSC)</th></tr></thead>
+      <tbody>
+        <tr><td>Force composition</td><td>one model live (piecewise)</td><td>blended sum \((1-w)\mathbf{F}_{\text{mesh}}+w\mathbf{F}_{\text{Fossen}}\)</td></tr>
+        <tr><td>Crossing behaviour</td><td class="no">step \(\Delta\mathbf{F}\neq0\)</td><td class="yes">\(C^0\), \(\Delta\mathbf{F}=0\)</td></tr>
+        <tr><td>Transition width</td><td>1 frame (<code>transitionFrames=0</code>)</td><td>one body-height band \(2h\)</td></tr>
+        <tr><td>Residual handling</td><td>manual <code>ClearLastForces</code></td><td>none needed</td></tr>
+        <tr><td>Peak-force bound</td><td class="no">none (torque unclamped)</td><td class="yes">\(v,\omega,F,\tau\) all clamped</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The PSC also broadcasts the global environmental state — including the instantaneous wave-elevation
+     field \(\eta_{\text{wave}}\) and surface topology — to every decoupled solver, so force models are
+     never static: the NSE plugin receives the real-time distance to the <i>oscillating</i> surface, not
+     the mean water level, enabling wave-coupled aerodynamic interference.</p>
+
+  <!-- ===================================================== LEAP -->
+  <h2 id="leap">2 · Lightweight Empirical Approximation Pipeline (LEAP)</h2>
+  <p>LEAP distills high-dimensional CFD and field observations of the Near-Surface Effect (NSE) and
+     Transmedium Resistance (TR) into low-dimensional, closed-form response functions evaluated in
+     constant time. It decomposes the target response into an empirical backbone plus a data-driven
+     residual:</p>
+  <div class="eq">$$ \hat{y}(x) = f_{\text{phys}}\bigl(x;\,\boldsymbol{\theta}(\mathbf{c})\bigr) + \epsilon_{\text{SR}}(x) $$</div>
+  <p>where \(f_{\text{phys}}\) captures the primary physical trend, the control inputs
+     \(\mathbf{c}\in\mathbb{R}^{m}\) (e.g. throttle ratio, impact velocity) modulate the shape vector
+     \(\boldsymbol{\theta}(\mathbf{c})\), and \(\epsilon_{\text{SR}}\) is a symbolic residual that
+     compensates for unmodeled high-order fluid dynamics.</p>
+
+  <h3>Near-Surface Effect backbone</h3>
+  <p>A composite decay function satisfies the boundary condition \(K_T \to K_{T\infty}\) as \(h\to\infty\):</p>
+  <div class="eq">$$ f_{\text{NSE}}(h) = 1 + \sum_{i=1}^{2} A_i(p,r)\,e^{-B_i(p,r)\,h} + \frac{A_3(p,r)}{(1+h)^n} $$</div>
+  <p>with \(h\) the normalized height; the coefficients are linearized in the throttle ratio \(p\) and
+     radius \(r\).</p>
+
+  <h3>Transmedium Resistance backbone</h3>
+  <p>A modified Hill equation captures the sigmoidal force saturation and the impact peak of the
+     air–water transition:</p>
+  <div class="eq">$$ f_{\text{TR}}(x) = C_{\text{base}} + \frac{A_{\text{peak}}(s,v)}{1 + \left(\dfrac{x}{x_{\text{half}}(s,v)}\right)^{n}} $$</div>
+  <p>where \(\mathbf{c}=[s,v]^\top\) carries the contact surface area \(s\) and impact velocity \(v\).
+     The training data comes from CFD simulations of water-exit maneuvers on two body configurations,
+     augmented with prior field work:</p>
+
+  <div class="fig-row">
+    <figure>
+      <img src="assets/img/cfd_water_exit1.png" alt="CFD water-exit, cylindrical body">
+      <figcaption><b>Cylindrical body.</b> Volume-fraction contours during water-exit (blue = water,
+        red = air): emergence generates a concentrated wake and a pronounced free-surface disturbance.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/img/cfd_water_exit2.png" alt="CFD water-exit, rectangular body">
+      <figcaption><b>Rectangular body.</b> The larger planform area produces a broader, shallower
+        disturbance. Sweeps at 0.5 and 1.0 m/s capture the slamming and wake characteristics.</figcaption>
+    </figure>
+  </div>
+
+  <p>LEAP distills these scattered samples into closed-form response surfaces — the resistance
+     coefficient \(C_{TR}\) as a smooth function of normalized immersion depth \(h/L\) and transition
+     velocity \(v\) — evaluated in constant time inside the TR plugin:</p>
+
+  <div class="fig-row">
+    <figure>
+      <img src="assets/img/tr_surface_entry.png" alt="LEAP water-entry response surface">
+      <figcaption><b>Water-entry</b> \(C_{TR}(h/L,\,v)\) response surface generated by LEAP.</figcaption>
+    </figure>
+    <figure>
+      <img src="assets/img/tr_surface_exit.png" alt="LEAP water-exit response surface">
+      <figcaption><b>Water-exit</b> \(C_{TR}(h/L,\,v)\) response surface generated by LEAP.</figcaption>
+    </figure>
+  </div>
+
+  <div class="note"><b>Why closed-form?</b> RBF interpolation must evaluate the distance to every stored
+     sample (\(\mathcal{O}(N)\)), giving a <b>135.38&nbsp;ms</b> query in the benchmark — too slow for a
+     &gt;100&nbsp;Hz control loop. LEAP compiles the dataset into an \(\mathcal{O}(1)\) analytic function
+     with a stable <b>0.63&nbsp;ms</b> evaluation and numerical stability through rapid transitions.</div>
+
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Model</th><th>NSE \(t_{\text{curve}}\) (ms)</th><th>TR \(t_{\text{curve}}\) (ms)</th><th>Extrapolation</th></tr></thead>
+      <tbody>
+        <tr><td>Polynomial surrogate (d4)</td><td>0.317</td><td>0.076</td><td class="no">unreliable</td></tr>
+        <tr><td>RBF interpolation</td><td>8.090</td><td>3.267</td><td class="mid">accurate but slow</td></tr>
+        <tr><td><b>Full LEAP</b></td><td class="yes"><b>0.092</b></td><td class="yes"><b>0.089</b></td><td class="yes">robust</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================================================== MT -->
+  <h2 id="mt">3 · Mechanical Transparency (MT)</h2>
+  <p>Simulation discrepancies in transmedium robotics usually arise from the superposition of several
+     localized effects. Rather than treating the physics engine as a black box, MT exposes the
+     decoupled force components as an inspectable information stream over ROS. Developers and automated
+     test scripts can query, log and compare individual force histories — enabling fault diagnostics,
+     system identification, force-level load inspection, and a faster real-to-sim calibration pipeline.</p>
+  <div class="tip"><b>In practice:</b> MT is how the PSC ablation directly measured the interface force
+     jump. Because the spike is read from the internal applied wrench — not inferred from trajectory
+     disturbance — the comparison isolates the force-composition strategy itself.</div>
+
+  <!-- ===================================================== REPLACEABLE -->
+  <h2 id="replaceable">4 · Replaceable dynamic models</h2>
+  <p>NezhaSim is built so the hydrodynamic model can be <b>swapped per research object</b> without
+     touching the engine. Replaceability is realized at four cooperating layers, ordered from least to
+     most invasive:</p>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Layer</th><th>Swap mechanism</th><th>Recompile?</th></tr></thead>
+      <tbody>
+        <tr><td>Research object</td><td>pick / compose a vehicle xacro in <code>nezha_description/</code></td><td class="yes">no</td></tr>
+        <tr><td>Model selection</td><td><code>&lt;hydrodynamic_model&gt;&lt;type&gt;</code> + parameter blocks in xacro</td><td class="yes">no</td></tr>
+        <tr><td>Learned surface</td><td>point <code>&lt;entryJson&gt;</code> / <code>&lt;aboveJson&gt;</code> at a different JSON \(\theta[22]\)</td><td class="yes">no</td></tr>
+        <tr><td>New force law</td><td>subclass <code>HydrodynamicModel</code>, register with the factory</td><td class="mid">yes (build the plugin)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>The <i>selection</i> is declarative (a <code>&lt;type&gt;fossen&lt;/type&gt;</code> string plus the
+     added-mass / damping matrices, read at load time <span class="csite">nezha_unified_plugin.cc:300–321</span>);
+     the <i>extension</i> is a classical abstract-base + registry-factory contract
+     (<code>HydrodynamicModel</code> → <code>HMFossen</code> → <code>HMSphere</code> / <code>HMCylinder</code>,
+     created by a string-keyed <code>HydrodynamicModelFactory</code>); and the <i>identification</i> data
+     is external JSON loaded at runtime <span class="csite">nezha_transmediaDragPlugin.cc:135</span>.</p>
+  <figure>
+    <img src="assets/img/model_swap.png" alt="Four dynamic-model swap points across the Nezha platform">
+    <figcaption><b>The four model-swap points.</b> A new research object swaps its dynamics by choosing a
+      description (Layer&nbsp;D), editing the <code>&lt;hydrodynamic_model&gt;</code> block (Layer&nbsp;A),
+      dropping in a new learned-drag JSON (Layer&nbsp;C), or — only for a brand-new force law — subclassing
+      the model interface and registering it with the factory (Layer&nbsp;B).</figcaption>
+  </figure>
+
+  <!-- ===================================================== ROBUSTNESS -->
+  <h2 id="robustness">Robustness across operating regimes</h2>
+  <p>Each baseline failure traces to the same root — a discrete, externally-arbitrated, hard-coded
+     switch that assumes nominal conditions. NezhaSim replaces every one of those assumptions with a
+     measured, per-frame, bounded computation, so it stays bounded when pushed beyond its calibrated
+     point along four axes:</p>
+  <figure>
+    <img src="assets/img/robustness_axes.png" alt="Four-axis robustness comparison: baseline vs unified">
+    <figcaption><b>Four-axis robustness.</b> Baseline (rigid switch) vs. the unified plugin across
+      vehicle scale, transition speed, wave conditions, OOD regime, force continuity and numerical
+      stability — higher is better.</figcaption>
+  </figure>
+  <div class="tablewrap">
+    <table>
+      <thead><tr><th>Stress axis</th><th>Baseline failure mode (code site)</th><th>NezhaSim mechanism (code site)</th></tr></thead>
+      <tbody>
+        <tr><td>Vehicle scale</td>
+            <td>Fixed thresholds &amp; a hand-set <code>characteristicLen</code>: a 0.3 m and a 3 m hull use the same numbers <span class="csite">phaseSwitch:88</span></td>
+            <td>Blend band &amp; mesh resolution sized from the <i>measured</i> bounding box; buoyancy from <code>robot_volume</code>; dimensionless in \(d/h\) <span class="csite">unified:362,388,531</span></td></tr>
+        <tr><td>Transition speed</td>
+            <td>Speed-blind discrete flip; faster crossing → larger single-frame step; no bound on entry drag or torque</td>
+            <td>Impact \(v,\omega\) clamps cap the drag input; quadratic entry drag dissipates KE; \(F\) &amp; \(\tau\) saturated <span class="csite">unified:622,633,768,832</span></td></tr>
+        <tr><td>Wave conditions</td>
+            <td>Phase from a throttled 50–100 Hz ROS service sampling one surface point — the wave outruns the poll, wrong model engaged mid-cycle <span class="csite">phaseSwitch:116,574</span></td>
+            <td>Wavefield sampled <i>every physics step</i> (no IPC); slope &amp; \(\partial\eta/\partial t\) by finite difference; damping wave-relative (Morison) <span class="csite">unified:483,561,701,792</span></td></tr>
+        <tr><td>Out-of-distribution</td>
+            <td>Learned drag surface <code>theta[22]</code> extrapolates with no physical bound; unknown phases hold the last state <span class="csite">drag:343</span></td>
+            <td>First-principles (Fossen + divergence-theorem buoyancy), clamped, with a non-finite / out-of-range state guard that vetoes bad steps <span class="csite">unified:441,669,832</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Information flow, end to end</h2>
+  <ol class="feature-list">
+    <li>The PSC reads vehicle kinematics and the live environmental state (wave field, surface topology).</li>
+    <li>It dispatches that state to every decoupled solver: RotorS (air), UUV/Fossen (underwater), ASV-Wave (surface), Husky (ground), plus the LEAP NSE &amp; TR plugins.</li>
+    <li>Each solver returns its own wrench; LEAP supplies the medium-transition corrections in \(\mathcal{O}(1)\).</li>
+    <li>The PSC blends them with the continuous submergence ratio into one body wrench.</li>
+    <li>MT publishes every component over ROS for inspection while the net wrench drives the rigid body.</li>
+  </ol>
+
+  <p style="margin-top:34px;"><a class="btn btn-primary" href="robots.html">Browse robots, worlds &amp; plugins →</a></p>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="col"><h4>NezhaSim</h4><p style="margin:0;max-width:260px;">A transmedium air–land–ocean robotics simulator built on the ROS / Gazebo ecosystem.</p></div>
+    <div class="col"><h4>Documentation</h4>
+      <p style="margin:4px 0;"><a href="installation.html">Installation</a></p>
+      <p style="margin:4px 0;"><a href="tutorials.html">Tutorials</a></p>
+      <p style="margin:4px 0;"><a href="architecture.html">Architecture</a></p>
+      <p style="margin:4px 0;"><a href="robots.html">Robots &amp; Worlds</a></p></div>
+    <div class="col"><h4>Project</h4>
+      <p style="margin:4px 0;"><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub repository</a></p>
+      <p style="margin:4px 0;"><a href="index.html#cite">How to cite</a></p>
+      <p style="margin:4px 0;"><a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact maintainer</a></p></div>
+    <div class="copy">© 2026 NezhaSim · Shanghai Jiao Tong University. Third-party packages retain their own upstream licenses.</div>
+  </div>
+</footer>
+
+</body>
+</html>
