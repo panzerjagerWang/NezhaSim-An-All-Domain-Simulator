@@ -13,6 +13,14 @@
 <script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
 <body>
+<!-- BASELINE-NOTICE -->
+<div class="baseline-banner">
+  <span class="pill">Baseline</span>
+  This public release is <b>NezhaSim-PSC-RS</b> — the <b>rigid medium-switching</b> baseline used for
+  comparison in the paper, provided <b>for benchmarking only</b>. The paper is still under review; the
+  full <b>NezhaSim</b> (continuous PSC blending&nbsp;+&nbsp;LEAP&nbsp;+&nbsp;MT) will be released after acceptance.
+</div>
+
 
 <nav class="nav">
   <div class="nav-inner">
@@ -72,6 +80,10 @@
 
   <!-- ===================================================== PSC -->
   <h2 id="psc">1 · Phase Switch Console (PSC) — the smooth wave transition</h2>
+  <div class="warn"><!-- RELEASE-NOTE-PSC --><b>Heads-up on the public release:</b> the currently
+     published repository is <b>NezhaSim-PSC-RS</b> — the rigid-switching baseline shown in red in the
+     figures below (the force spike). The continuous-blend PSC described in this section ships with
+     the <b>full NezhaSim</b> after the paper is accepted.</div>
   <p>The PSC is the component that makes the air ⇄ water crossing <b>smooth</b>. The headline change is
      how the vehicle's hydrodynamic wrench is composed at the surface. We replaced the baseline's rigid
      plugin switching with a single plugin that <i>blends</i> two force models through a transition band.

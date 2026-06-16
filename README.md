@@ -12,6 +12,15 @@
   ### 📖 [**Read the tutorials &amp; documentation site →**](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/)
 </div>
 
+
+
+> ⚠️ **Baseline release — NezhaSim-PSC-RS (rigid switching).**
+> The code in this repository is **NezhaSim-PSC-RS**, the *rigid medium-switching* baseline
+> the paper uses for comparison, and is intended **only as a baseline / benchmark**. The
+> continuous-transition behaviour described in the docs (PSC blending + LEAP + MT) is the
+> **full NezhaSim**, still under development. The paper is currently under consideration; the
+> final NezhaSim will be released once it is accepted.
+
 ---
 
 ## What is NezhaSim?
