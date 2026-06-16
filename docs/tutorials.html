@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tutorials — NezhaSim</title>
+<meta name="description" content="Step-by-step tutorials for NezhaSim: water take-off, triple-domain Husky missions, underwater control and reading the Mechanical-Transparency force streams.">
+<link rel="icon" href="assets/img/logo.gif">
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-inner">
+    <a class="nav-brand" href="index.html"><img src="assets/img/logo.gif" alt="NezhaSim logo"><span>Nezha<b>Sim</b></span></a>
+    <div class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="installation.html">Install</a>
+      <a href="tutorials.html" class="active">Tutorials</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="robots.html">Robots &amp; Worlds</a>
+      <a href="index.html#cite">Cite</a>
+      <a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub ↗</a>
+    </div>
+  </div>
+</nav>
+
+<main class="page">
+  <div class="page-head">
+    <div class="eyebrow">Hands-on</div>
+    <h1>Tutorials</h1>
+  </div>
+  <p class="lead">Five guided walkthroughs, from your first lake take-off to reading the decoupled
+     force streams. Each assumes you have <a href="installation.html">built the workspace</a> and run
+     <code>source ~/nezha_ws/devel/setup.bash</code> in every terminal.</p>
+
+  <div class="note"><b>Convention:</b> open Gazebo from one sourced terminal and run commands /
+     ROS tools from a second sourced terminal. <kbd>Ctrl-C</kbd> in the launch terminal shuts the
+     simulation down cleanly.</div>
+
+  <!-- ============================================================ T1 -->
+  <h2 id="t1">Tutorial 1 — Your first transmedium take-off</h2>
+  <p>Spawn the <b>nezha_mini</b> transmedium quadrotor floating in a lake and watch it punch through
+     the water surface into the air — the canonical air ⇄ water transition.</p>
+
+  <div class="step"><div class="num">1</div><div class="body">
+    <h3>Launch the lake world</h3>
+    <p>This brings up Gazebo with the lake, the spectral wave field and the vehicle at the surface.</p>
+<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch</pre>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div class="body">
+    <h3>Trigger the water-exit maneuver</h3>
+    <p>The <code>nezha_mini_wavetakeoff.launch</code> variant spawns the vehicle and runs a take-off
+       through a wavy surface, exercising the Near-Surface-Effect and Transmedium-Resistance plugins.</p>
+<pre><span class="c"># wave-coupled take-off (NSE + TR active)</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_mini_wavetakeoff.launch
+
+<span class="c"># or the calm-surface version</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_mini_takeoff.launch</pre>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div class="body">
+    <h3>Watch the transition</h3>
+    <p>As the rotors spin up, buoyancy hands off to aerodynamic thrust. Because the <b>Phase Switch
+       Console</b> blends the two hydrodynamic models, you should see the vehicle rise <i>without</i>
+       the force jump that a rigid medium-switch would produce.</p>
+    <div class="tip"><b>What to observe:</b> rotor thrust derates as the props approach the surface
+       (NSE), then a brief resistance peak as the body breaches (TR), then clean hover in air with
+       zero water drag.</div>
+  </div></div>
+
+  <!-- ============================================================ T2 -->
+  <h2 id="t2">Tutorial 2 — Triple-domain Husky mission (land → water → air)</h2>
+  <p>Reproduce <b>Scenario A</b> from the paper: the XX-Husky drives on land, dives and tracks an
+     underwater trajectory, then performs a water-exit and hovers as a UAV — all in one continuous run.</p>
+
+  <div class="step"><div class="num">1</div><div class="body">
+    <h3>Launch the all-domain Husky</h3>
+<pre><span class="k">roslaunch</span> nezha_gazebo nezha_husky_UGV_UAV_UUV.launch</pre>
+    <p>Other staged variants are available if you want to bring the domains up incrementally:</p>
+<pre><span class="c"># ground only</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_husky_pure_UGV.launch
+<span class="c"># ground + air</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_husky_UGV_UAV.launch
+<span class="c"># full ground + air + underwater</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_husky.launch</pre>
+  </div></div>
+
+  <div class="step"><div class="num">2</div><div class="body">
+    <h3>Run the scripted scenario</h3>
+    <p>The mission profile (UGV obstacle run → UUV trajectory tracking → water-exit → UAV hover) is
+       driven from the helper scripts shipped under <code>nezha_gazebo/scripts/</code>.</p>
+<pre><span class="k">rosrun</span> nezha_gazebo scenario_run.py</pre>
+  </div></div>
+
+  <div class="step"><div class="num">3</div><div class="body">
+    <h3>Confirm continuity at the boundaries</h3>
+    <p>The PSC monitors the interface and engages the appropriate hydrodynamic / aerodynamic plugins
+       while decoupling ground-reaction forces. In the paper this configuration reached a
+       <b>100% success rate</b> over 12 trials, versus 10/12 for the UUV-Simulator+RotorS baseline.</p>
+  </div></div>
+
+  <!-- ============================================================ T3 -->
+  <h2 id="t3">Tutorial 3 — Underwater attitude &amp; trajectory control (XX-Mini)</h2>
+  <p>Reproduce <b>Scenario B</b>: a real-to-sim validation where the simulated underwater dynamics are
+     compared against XX-Mini field data (depth error &lt; 0.5&nbsp;m, pitch error &lt; 2°).</p>
+
+  <div class="step"><div class="num">1</div><div class="body">
+    <h3>Bring up an underwater world</h3>
+<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch</pre>
+  </div></div>
+  <div class="step"><div class="num">2</div><div class="body">
+    <h3>Start the depth / attitude controller</h3>
+    <p>The underwater 6-DOF dynamics follow the standard Fossen formulation — mass &amp; inertia,
+       added-mass matrix, and linear + quadratic damping coefficients, all read from the vehicle URDF.</p>
+<pre><span class="k">rosrun</span> nezha_gazebo UUV_CONTROLV17.py</pre>
+  </div></div>
+  <div class="step"><div class="num">3</div><div class="body">
+    <h3>Tune &amp; compare</h3>
+    <p>Because every hydrodynamic parameter lives in the model's config, you can tune the added-mass
+       and damping terms and immediately re-run to see the effect on depth-keeping and surfacing.</p>
+  </div></div>
+
+  <!-- ============================================================ T4 -->
+  <h2 id="t4">Tutorial 4 — Reading the Mechanical-Transparency force streams</h2>
+  <p>NezhaSim's defining debugging feature: instead of one black-box net wrench, every force component
+     is published separately so you can log, plot and compare them.</p>
+
+  <div class="step"><div class="num">1</div><div class="body">
+    <h3>List the decoupled wrench topics</h3>
+<pre><span class="k">rostopic</span> list | grep -E 'force|wrench|buoyan|drag'</pre>
+  </div></div>
+  <div class="step"><div class="num">2</div><div class="body">
+    <h3>Echo a single effect in real time</h3>
+<pre><span class="c"># e.g. the buoyancy wrench on the main body</span>
+<span class="k">rostopic</span> echo /nezha/buoyancy_force
+
+<span class="c"># the transmedium drag (TR) contribution</span>
+<span class="k">rostopic</span> echo /nezha/transmedia_drag</pre>
+  </div></div>
+  <div class="step"><div class="num">3</div><div class="body">
+    <h3>Plot the water-exit force history</h3>
+    <p>Use <code>rqt_plot</code> (or record a bag) to capture the buoyancy decay, the TR slamming peak
+       and the rotor-thrust ramp during a transition — exactly the curves used to tune feedforward
+       compensators before physical deployment.</p>
+<pre><span class="k">rosrun</span> rqt_plot rqt_plot</pre>
+    <div class="tip"><b>Why this matters:</b> the same MT interface measured the ~8.5&nbsp;N force jump
+       of rigid switching vs. the ~1.3&nbsp;N continuous profile of the PSC — directly from the internal
+       applied wrench, not inferred from trajectory wobble.</div>
+  </div></div>
+
+  <!-- ============================================================ T5 -->
+  <h2 id="t5">Tutorial 5 — Force identification on the gantry rigs</h2>
+  <p>The constrained <b>gantry</b> models hold a body at fixed positions / velocities so you can
+     measure clean force curves — the same setup used to calibrate the LEAP models.</p>
+<pre><span class="c"># distance sweep across the air–water interface (quasi-static NSE / TR)</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_gantry_distance.launch
+
+<span class="c"># constant-velocity water-exit sweep</span>
+<span class="k">roslaunch</span> nezha_gazebo nezha_gantry_velocity.launch
+
+<span class="c"># drive the rig &amp; log forces</span>
+<span class="k">rosrun</span> nezha_gazebo gantry_controller.py
+<span class="k">rosrun</span> nezha_gazebo water_drag_test.py</pre>
+  <p>Sweeping the body across the waterline reproduces the quasi-static trans-media test: hold the
+     vehicle at a sequence of fixed heights, read the vertical hydrodynamic force through MT, and
+     watch the PSC produce a smooth, monotonic force curve where rigid switching would jump.</p>
+
+  <h2>Where to go next</h2>
+  <ul class="feature-list">
+    <li><a href="architecture.html">Architecture</a> — how the PSC, LEAP and MT fit together.</li>
+    <li><a href="robots.html">Robots &amp; Worlds</a> — the full catalogue of vehicles, worlds and plugins.</li>
+    <li>Open an issue on <a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub</a> if a launch file misbehaves.</li>
+  </ul>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="col"><h4>NezhaSim</h4><p style="margin:0;max-width:260px;">A transmedium air–land–ocean robotics simulator built on the ROS / Gazebo ecosystem.</p></div>
+    <div class="col"><h4>Documentation</h4>
+      <p style="margin:4px 0;"><a href="installation.html">Installation</a></p>
+      <p style="margin:4px 0;"><a href="tutorials.html">Tutorials</a></p>
+      <p style="margin:4px 0;"><a href="architecture.html">Architecture</a></p>
+      <p style="margin:4px 0;"><a href="robots.html">Robots &amp; Worlds</a></p></div>
+    <div class="col"><h4>Project</h4>
+      <p style="margin:4px 0;"><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub repository</a></p>
+      <p style="margin:4px 0;"><a href="index.html#cite">How to cite</a></p>
+      <p style="margin:4px 0;"><a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact maintainer</a></p></div>
+    <div class="copy">© 2026 NezhaSim · Shanghai Jiao Tong University. Third-party packages retain their own upstream licenses.</div>
+  </div>
+</footer>
+
+</body>
+</html>
