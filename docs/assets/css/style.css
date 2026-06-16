@@ -229,3 +229,13 @@ footer .copy { width:100%; border-top:1px solid rgba(255,255,255,0.12); margin-t
   .nav-links a { padding: 6px 9px; font-size: 0.85rem; }
   .nav-brand span { display:none; }
 }
+
+
+/* ---------------------------------------------------- baseline release notice */
+.baseline-banner { background: linear-gradient(90deg,#fff4e5,#ffe9cc);
+  color:#7a4400; border-bottom:2px solid #e08a2b; padding:11px 18px; text-align:center;
+  font-size:0.92rem; line-height:1.5; }
+.baseline-banner b { color:#8a3300; }
+.baseline-banner .pill { display:inline-block; background:#e08a2b; color:#fff;
+  font-weight:700; font-size:0.72rem; letter-spacing:.5px; padding:2px 9px;
+  border-radius:999px; margin-right:8px; text-transform:uppercase; vertical-align:middle; }
