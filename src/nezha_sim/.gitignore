@@ -1,0 +1,38 @@
+# --- catkin / ROS build artifacts ---
+build/
+devel/
+install/
+logs/
+.catkin_tools/
+*.catkin_workspace
+.catkin_workspace
+
+# --- third-party working trees (tracked via root gitlinks or vendored files) ---
+third_party/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Reinforcement-learning / experiment artifacts (keep out of the repo) ---
+*.pth
+*.ckpt
+*.npy
+*.npz
+*.zip
+results/
+results_*/
+hydro_logs*/
+trajectory_epoch_*.png
+uav_trajectory_*.png
+
+# --- editors / OS ---
+.idea/
+.vscode/
+*.iml
+*.swp
+*~
+.DS_Store

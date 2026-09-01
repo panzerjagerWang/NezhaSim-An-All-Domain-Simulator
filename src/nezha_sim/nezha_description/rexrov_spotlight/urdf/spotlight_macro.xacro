@@ -87,11 +87,11 @@
       </collision>
     </link>
 
-    <!-- Gazebo 专属：材质、光源和体积光锥（cone 只能放在 Gazebo 可视化里） -->
+    <!-- Gazebo-specific: material, light source, and volumetric light cone (the cone can only live in the Gazebo visual) -->
     <gazebo reference="${prefix}spotlight_link">
       <material>Gazebo/Grey</material>
 
-      <!-- 体积光锥（仅 Gazebo 可见） -->
+      <!-- Volumetric light cone (visible in Gazebo only) -->
       <visual name="${prefix}beam_cone_helper">
         <pose>0 0 0.35 0 0 0</pose>
         <geometry>
@@ -109,7 +109,7 @@
         <cast_shadows>false</cast_shadows>
       </visual>
 
-      <!-- 聚光灯：仅保留一处定义，名称带 unique_id -->
+      <!-- Spotlight: keep a single definition, with unique_id appended to the name -->
       <light name="${prefix}spotlight_beam${unique_id}" type="spot">
         <pose>0 0 0.35 0 0 0</pose>
         <diffuse>1.2 1.2 1.2 1</diffuse>

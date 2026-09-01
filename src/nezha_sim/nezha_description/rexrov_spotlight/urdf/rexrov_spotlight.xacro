@@ -33,7 +33,7 @@
   <!-- Joint state publisher plugin -->
   <xacro:default_joint_state_publisher namespace="$(arg namespace)" update_rate="50"/>
 
-  <!-- ✅ 在这里应用 Nezha 插件 -->
+  <!-- Apply the Nezha plugins here -->
   <xacro:apply_nezha_plugins namespace="$(arg namespace)"/>
 
 </robot>

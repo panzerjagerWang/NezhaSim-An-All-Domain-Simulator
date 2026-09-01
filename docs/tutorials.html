@@ -9,12 +9,10 @@
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<!-- BASELINE-NOTICE -->
 <div class="baseline-banner">
-  <span class="pill">Baseline</span>
-  This public release is <b>NezhaSim-PSC-RS</b> — the <b>rigid medium-switching</b> baseline used for
-  comparison in the paper, provided <b>for benchmarking only</b>. The paper is still under review; the
-  full <b>NezhaSim</b> (continuous PSC blending&nbsp;+&nbsp;LEAP&nbsp;+&nbsp;MT) will be released after acceptance.
+  <span class="pill">Current source</span>
+  Commands on this page match the launch files, topics, and services in the repository's current
+  ROS&nbsp;Noetic / Gazebo&nbsp;11 workspace.
 </div>
 
 
@@ -38,50 +36,45 @@
     <div class="eyebrow">Hands-on</div>
     <h1>Tutorials</h1>
   </div>
-  <p class="lead">Five guided walkthroughs, from your first lake take-off to reading the decoupled
-     force streams. Each assumes you have <a href="installation.html">built the workspace</a> and run
-     <code>source ~/nezha_ws/devel/setup.bash</code> in every terminal.</p>
+  <p class="lead">A checked quick path from first launch to an air–water transition, direct thruster
+     control, and force telemetry. The complete seven-part guide lives in
+     <a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/tree/main/src/nezha_sim/docs/tutorials">the source tutorials</a>.
+     Each terminal must run <code>source ~/nezha_ws/devel/setup.bash</code>.</p>
 
   <div class="note"><b>Convention:</b> open Gazebo from one sourced terminal and run commands /
      ROS tools from a second sourced terminal. <kbd>Ctrl-C</kbd> in the launch terminal shuts the
      simulation down cleanly.</div>
 
   <!-- ============================================================ T1 -->
-  <h2 id="t1">Tutorial 1 — Your first transmedium take-off</h2>
-  <p>Spawn the <b>nezha_mini</b> transmedium quadrotor floating in a lake and watch it punch through
-     the water surface into the air — the canonical air ⇄ water transition.</p>
+  <h2 id="t1">Tutorial 1 — Command a transmedium take-off</h2>
+  <p>Spawn <b>nezha_mini</b> in the lake, start physics, and send the RotorS controller an explicit
+     position setpoint above the waterline.</p>
 
   <div class="step"><div class="num">1</div><div class="body">
     <h3>Launch the lake world</h3>
     <p>This brings up Gazebo with the lake, the spectral wave field and the vehicle at the surface.</p>
-<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch</pre>
+<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch paused:=false</pre>
   </div></div>
 
   <div class="step"><div class="num">2</div><div class="body">
-    <h3>Trigger the water-exit maneuver</h3>
-    <p>The <code>nezha_mini_wavetakeoff.launch</code> variant spawns the vehicle and runs a take-off
-       through a wavy surface, exercising the Near-Surface-Effect and Transmedium-Resistance plugins.</p>
-<pre><span class="c"># wave-coupled take-off (NSE + TR active)</span>
-<span class="k">roslaunch</span> nezha_gazebo nezha_mini_wavetakeoff.launch
-
-<span class="c"># or the calm-surface version</span>
-<span class="k">roslaunch</span> nezha_gazebo nezha_mini_takeoff.launch</pre>
+    <h3>Publish the setpoint from Terminal B</h3>
+<pre><span class="k">rostopic</span> pub -r 20 /nezha_mini/command/pose geometry_msgs/PoseStamped \
+  '{header: {frame_id: world}, pose: {position: {x: 0.0, y: 0.0, z: 2.0}, orientation: {w: 1.0}}}'</pre>
+    <div class="tip"><b>Important:</b> the files named <code>nezha_mini_takeoff.launch</code> and
+       <code>nezha_mini_wavetakeoff.launch</code> are currently scene aliases; they do not run a
+       maneuver. The setpoint above causes the takeoff.</div>
   </div></div>
 
   <div class="step"><div class="num">3</div><div class="body">
-    <h3>Watch the transition</h3>
-    <p>As the rotors spin up, buoyancy hands off to aerodynamic thrust. Because the <b>Phase Switch
-       Console</b> blends the two hydrodynamic models, you should see the vehicle rise <i>without</i>
-       the force jump that a rigid medium-switch would produce.</p>
-    <div class="tip"><b>What to observe:</b> rotor thrust derates as the props approach the surface
-       (NSE), then a brief resistance peak as the body breaches (TR), then clean hover in air with
-       zero water drag.</div>
+    <h3>Confirm the transition</h3>
+<pre><span class="k">rostopic</span> echo /nezha_mini/ground_truth/pose
+<span class="k">rosservice</span> call /nezha_mini/transmedia/get_phase_sample "{}"</pre>
+    <p>Watch <code>position.z</code> cross the service's reported <code>surface_z</code>.</p>
   </div></div>
 
   <!-- ============================================================ T2 -->
-  <h2 id="t2">Tutorial 2 — Triple-domain Husky mission (land → water → air)</h2>
-  <p>Reproduce <b>Scenario A</b> from the paper: the XX-Husky drives on land, dives and tracks an
-     underwater trajectory, then performs a water-exit and hovers as a UAV — all in one continuous run.</p>
+  <h2 id="t2">Tutorial 2 — Inspect the triple-domain Husky</h2>
+  <p>Launch the composed ground, aerial, and underwater model, then inspect the interfaces it exposes.</p>
 
   <div class="step"><div class="num">1</div><div class="body">
     <h3>Launch the all-domain Husky</h3>
@@ -96,84 +89,70 @@
   </div></div>
 
   <div class="step"><div class="num">2</div><div class="body">
-    <h3>Run the scripted scenario</h3>
-    <p>The mission profile (UGV obstacle run → UUV trajectory tracking → water-exit → UAV hover) is
-       driven from the helper scripts shipped under <code>nezha_gazebo/scripts/</code>.</p>
-<pre><span class="k">rosrun</span> nezha_gazebo scenario_run.py</pre>
+    <h3>Discover actuator and physics interfaces</h3>
+<pre><span class="k">rostopic</span> list | grep -E 'nezha_husky|cmd_vel|thruster|command'
+<span class="k">rosservice</span> list | grep -E 'nezha_husky|hydrodynamics|phase'</pre>
+    <p><code>scenario_run.py</code> targets <code>nezha_mini</code> and a hard-coded field-data file; it
+       is not a Husky mission driver and is intentionally not used here.</p>
   </div></div>
 
   <div class="step"><div class="num">3</div><div class="body">
-    <h3>Confirm continuity at the boundaries</h3>
-    <p>The PSC monitors the interface and engages the appropriate hydrodynamic / aerodynamic plugins
-       while decoupling ground-reaction forces. In the paper this configuration reached a
-       <b>100% success rate</b> over 12 trials, versus 10/12 for the UUV-Simulator+RotorS baseline.</p>
+    <h3>Compare staged variants</h3>
+    <p>Repeat the discovery commands with the ground-only and ground+air launches above to see which
+       interfaces each model composition adds.</p>
   </div></div>
 
   <!-- ============================================================ T3 -->
-  <h2 id="t3">Tutorial 3 — Underwater attitude &amp; trajectory control (XX-Mini)</h2>
-  <p>Reproduce <b>Scenario B</b>: a real-to-sim validation where the simulated underwater dynamics are
-     compared against XX-Mini field data (depth error &lt; 0.5&nbsp;m, pitch error &lt; 2°).</p>
+  <h2 id="t3">Tutorial 3 — Direct underwater thruster control</h2>
+  <p>Command the two surge thrusters, then read pose and hydrodynamic force telemetry.</p>
 
   <div class="step"><div class="num">1</div><div class="body">
     <h3>Bring up an underwater world</h3>
 <pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch</pre>
   </div></div>
   <div class="step"><div class="num">2</div><div class="body">
-    <h3>Start the depth / attitude controller</h3>
-    <p>The underwater 6-DOF dynamics follow the standard Fossen formulation — mass &amp; inertia,
-       added-mass matrix, and linear + quadratic damping coefficients, all read from the vehicle URDF.</p>
-<pre><span class="k">rosrun</span> nezha_gazebo UUV_CONTROLV17.py</pre>
+    <h3>Publish modest continuous setpoints</h3>
+<pre><span class="k">rostopic</span> pub -r 10 /nezha_mini/thrusters/1/input uuv_gazebo_ros_plugins_msgs/FloatStamped "{data: 20.0}" &amp;
+<span class="k">rostopic</span> pub -r 10 /nezha_mini/thrusters/2/input uuv_gazebo_ros_plugins_msgs/FloatStamped "{data: 20.0}" &amp;</pre>
   </div></div>
   <div class="step"><div class="num">3</div><div class="body">
-    <h3>Tune &amp; compare</h3>
-    <p>Because every hydrodynamic parameter lives in the model's config, you can tune the added-mass
-       and damping terms and immediately re-run to see the effect on depth-keeping and surfacing.</p>
+    <h3>Inspect and stop</h3>
+<pre><span class="k">rosservice</span> call /nezha_mini/get_hydrodynamics_forces "{}"
+<span class="k">kill</span> %1 %2</pre>
+    <p><code>UUV_CONTROLV17.py</code> expects an unshipped <code>trajectory.csv</code>, opens a Tk plot,
+       and runs repeated research trials; it is not a beginner <code>rosrun</code> command.</p>
   </div></div>
 
   <!-- ============================================================ T4 -->
-  <h2 id="t4">Tutorial 4 — Reading the Mechanical-Transparency force streams</h2>
-  <p>NezhaSim's defining debugging feature: instead of one black-box net wrench, every force component
-     is published separately so you can log, plot and compare them.</p>
+  <h2 id="t4">Tutorial 4 — Read force and phase telemetry</h2>
+  <p>This source exposes transmedia drag as a ROS topic and the hydrodynamic decomposition and phase
+     sample as ROS services.</p>
 
   <div class="step"><div class="num">1</div><div class="body">
     <h3>List the decoupled wrench topics</h3>
-<pre><span class="k">rostopic</span> list | grep -E 'force|wrench|buoyan|drag'</pre>
+<pre><span class="k">rostopic</span> list | grep -iE 'force|wrench|buoyan|drag|thrust'
+<span class="k">rosservice</span> list | grep -iE 'force|hydro|phase'</pre>
   </div></div>
   <div class="step"><div class="num">2</div><div class="body">
     <h3>Echo a single effect in real time</h3>
-<pre><span class="c"># e.g. the buoyancy wrench on the main body</span>
-<span class="k">rostopic</span> echo /nezha/buoyancy_force
-
-<span class="c"># the transmedium drag (TR) contribution</span>
-<span class="k">rostopic</span> echo /nezha/transmedia_drag</pre>
+<pre><span class="k">rostopic</span> echo /nezha_mini/transmedia_drag
+<span class="k">rosservice</span> call /nezha_mini/get_hydrodynamics_forces "{}"
+<span class="k">rosservice</span> call /nezha_mini/transmedia/get_phase_sample "{}"</pre>
   </div></div>
   <div class="step"><div class="num">3</div><div class="body">
-    <h3>Plot the water-exit force history</h3>
-    <p>Use <code>rqt_plot</code> (or record a bag) to capture the buoyancy decay, the TR slamming peak
-       and the rotor-thrust ramp during a transition — exactly the curves used to tune feedforward
-       compensators before physical deployment.</p>
-<pre><span class="k">rosrun</span> rqt_plot rqt_plot</pre>
-    <div class="tip"><b>Why this matters:</b> the same MT interface measured the ~8.5&nbsp;N force jump
-       of rigid switching vs. the ~1.3&nbsp;N continuous profile of the PSC — directly from the internal
-       applied wrench, not inferred from trajectory wobble.</div>
+    <h3>Plot or record the published topic</h3>
+<pre><span class="k">rosrun</span> rqt_plot rqt_plot
+<span class="c"># add /nezha_mini/transmedia_drag/vector/z in the plot</span>
+<span class="k">rosbag</span> record -O takeoff_forces.bag /nezha_mini/transmedia_drag /nezha_mini/ground_truth/pose</pre>
+    <div class="tip"><b>Note:</b> services are request/response calls and are not rosbag topics.
+       Poll them separately when you need buoyancy, damping, added-mass, Coriolis, wave, or phase data.</div>
   </div></div>
 
   <!-- ============================================================ T5 -->
-  <h2 id="t5">Tutorial 5 — Force identification on the gantry rigs</h2>
-  <p>The constrained <b>gantry</b> models hold a body at fixed positions / velocities so you can
-     measure clean force curves — the same setup used to calibrate the LEAP models.</p>
-<pre><span class="c"># distance sweep across the air–water interface (quasi-static NSE / TR)</span>
-<span class="k">roslaunch</span> nezha_gazebo nezha_gantry_distance.launch
-
-<span class="c"># constant-velocity water-exit sweep</span>
-<span class="k">roslaunch</span> nezha_gazebo nezha_gantry_velocity.launch
-
-<span class="c"># drive the rig &amp; log forces</span>
-<span class="k">rosrun</span> nezha_gazebo gantry_controller.py
-<span class="k">rosrun</span> nezha_gazebo water_drag_test.py</pre>
-  <p>Sweeping the body across the waterline reproduces the quasi-static trans-media test: hold the
-     vehicle at a sequence of fixed heights, read the vertical hydrodynamic force through MT, and
-     watch the PSC produce a smooth, monotonic force curve where rigid switching would jump.</p>
+  <h2 id="t5">Continue with the complete guide</h2>
+  <p>The source guide also covers world/model selection, the Husky composition in more detail, and
+     PX4 hardware-in-the-loop. Research gantry and mission scripts are kept in the source tree but
+     are not presented as turnkey commands without their experiment-specific inputs.</p>
 
   <h2>Where to go next</h2>
   <ul class="feature-list">

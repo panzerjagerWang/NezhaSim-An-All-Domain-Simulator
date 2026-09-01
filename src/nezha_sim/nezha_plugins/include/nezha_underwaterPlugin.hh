@@ -1,5 +1,11 @@
-#ifndef __UUV_GAZEBO_PLUGINS_UNDERWATER_OBJECT_HH__
-#define __UUV_GAZEBO_PLUGINS_UNDERWATER_OBJECT_HH__
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
+#ifndef __NEZHA_UNDERWATER_OBJECT_PLUGIN_HH__
+#define __NEZHA_UNDERWATER_OBJECT_PLUGIN_HH__
 
 #include <map>
 #include <string>
@@ -7,7 +13,7 @@
 #include <gazebo/gazebo.hh>
 #include <gazebo/msgs/msgs.hh>
 
-// ✅ 添加 ROS 头文件
+// ✅ ROS Headers
 #include <ros/ros.h>
 #include <uuv_gazebo_ros_plugins_msgs/GetFloat.h>
 #include <uuv_gazebo_ros_plugins_msgs/SetFloat.h>
@@ -19,13 +25,16 @@ namespace gazebo
 {
 
 /// \brief Gazebo model plugin class for underwater objects
-class UnderwaterObjectPlugin : public gazebo::ModelPlugin
+// !!! CHANGED CLASS NAME !!!
+class NezhaUnderwaterObjectPlugin : public gazebo::ModelPlugin
 {
   /// \brief Constructor
-  public: UnderwaterObjectPlugin();
+  // !!! CHANGED CONSTRUCTOR !!!
+  public: NezhaUnderwaterObjectPlugin();
 
   /// \brief Destructor
-  public: virtual ~UnderwaterObjectPlugin();
+  // !!! CHANGED DESTRUCTOR !!!
+  public: virtual ~NezhaUnderwaterObjectPlugin();
 
   // Documentation inherited.
   public: virtual void Load(gazebo::physics::ModelPtr _model,
@@ -74,10 +83,8 @@ class UnderwaterObjectPlugin : public gazebo::ModelPlugin
   /// the simulation
   /// \param[in] _link Pointer to the link
   /// \param[in] _hydro Pointer to the hydrodynamic model
-  protected: virtual void InitDebug(gazebo::physics::LinkPtr _link,
-    gazebo::HydrodynamicModelPtr _hydro);
-
-  // ✅ ROS 服务回调函数声明
+  protected: virtual void InitDebug(gazebo::physics::LinkPtr _link, nezha::HydrodynamicModelPtr _hydro);
+  // ✅ ROS Service Callbacks
   protected: bool GetFluidDensity(
       uuv_gazebo_ros_plugins_msgs::GetFloat::Request& req,
       uuv_gazebo_ros_plugins_msgs::GetFloat::Response& res);
@@ -111,8 +118,8 @@ class UnderwaterObjectPlugin : public gazebo::ModelPlugin
       uuv_gazebo_ros_plugins_msgs::SetFloat::Response& res);
 
   /// \brief Pairs of links & corresponding hydrodynamic models
-  protected: std::map<gazebo::physics::LinkPtr,
-                      HydrodynamicModelPtr> models;
+  protected: std::map<nezha::physics::LinkPtr,
+                      nezha::HydrodynamicModelPtr> models;
 
   /// \brief Flow velocity vector read from topic
   protected: ignition::math::Vector3d flowVelocity;
@@ -143,12 +150,10 @@ class UnderwaterObjectPlugin : public gazebo::ModelPlugin
   /// the case the debug flag is on
   protected: std::map<std::string, gazebo::transport::PublisherPtr> hydroPub;
 
-  // ✅ 添加 ROS 相关成员变量（这两行是关键！）
+  // ✅ ROS related members
   protected: std::unique_ptr<ros::NodeHandle> rosNode;
   
   protected: std::map<std::string, ros::ServiceServer> services;
 };
 }
-
-#endif  // __UUV_GAZEBO_PLUGINS_UNDERWATER_OBJECT_HH__
-
+#endif  // __NEZHA_UNDERWATER_OBJECT_PLUGIN_HH__

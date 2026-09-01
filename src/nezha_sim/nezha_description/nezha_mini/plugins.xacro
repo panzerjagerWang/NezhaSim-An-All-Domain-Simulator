@@ -1,10 +1,15 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 
 <robot name="plugin" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:arg name="debug" default="false"/>
   <xacro:arg name="mode" default="_mini"/>
   <xacro:arg name="namespace" default="nezha_mini"/>
-    <xacro:property name="buoyancy_scale" value="1.0"/>
 
   <xacro:property name="namespace" value="$(arg namespace)"/>
   <xacro:arg name="inertial_reference_frame" default="world"/>
@@ -22,7 +27,167 @@
     <xacro:box_inertia x="${radius_rotor}" y="0.015" z="0.003" mass="${mass_rotor*rotor_velocity_slowdown_sim}" />
   </xacro:property>
   
-  
+    <!-- ==========================================
+       1. Unified Hydrodynamics Plugin Macro
+       (Replaces Surface, Underwater, and PhaseSwitch)
+       ========================================== -->
+  <xacro:macro name="unified_hydrodynamics_plugin" 
+               params="namespace 
+                       link_name 
+                       wave_model:='nezha_ocean_waves'
+                       volume:=${volume}
+                       buoyancy_scale:=${buoyancy_scale}
+                       force_scale_factor:=${force_scale_factor}">
+    <gazebo>
+      <plugin name="nezha_unified_hydrodynamics" filename="libnezha_unified_plugin.so">
+        
+        <!-- General Configuration -->
+        <robotNamespace>${namespace}</robotNamespace>
+        <link_name>${link_name}</link_name>
+        <wave_model>${wave_model}</wave_model>
+
+        <!-- ✅ Top-level params read by the plugin Load():
+             these MUST sit at the plugin top level, NOT inside
+             <hydrodynamic_model>, or the C++ won't find them. -->
+        <robot_volume>${volume}</robot_volume>
+        <buoyancy_scale>${buoyancy_scale}</buoyancy_scale>
+        <force_scale_factor>${force_scale_factor}</force_scale_factor>
+
+        <!-- Phase Switching Thresholds (Hysteresis) -->
+        <threshold_high>0</threshold_high>
+        <threshold_low>0</threshold_low>
+
+        <!-- ✅ Mesh PRESSURE (form) drag coefficients. drag ~ (cPDrag1*v +
+             cPDrag2*v^2) per submerged face, along its normal. The engine
+             DEFAULT is 1e4 — physically absurd: it puts hundreds of N on the
+             flat top/bottom faces at even slow heave speed, which (a) strangles
+             wave-following and (b) is what the up-ratchet bug pumped into orbit.
+             Brought down to a sane form-drag level so the body can actually bob
+             with the waves. Raise for more vertical resistance, lower toward 0
+             to let it follow the surface more freely. -->
+        <cPDrag1>20.0</cPDrag1>
+        <cPDrag2>100.0</cPDrag2>
+
+        <!-- ✅ Wave-kinematics coupling.
+             wave_decay_length: depth (m) over which the wave's orbital water
+               motion fades (e^-depth/L). Larger = a deeper body still gets
+               carried up/down by the wave; smaller = only the near-surface body
+               follows. ~ wavelength/2pi is physical.
+             wave_align_gain: torque that tilts the body to the wave-surface
+               normal so it lands on / floats along the wave face instead of
+               flat. Raise for snappier alignment, 0 to disable. -->
+        <wave_decay_length>2.0</wave_decay_length>
+        <wave_align_gain>3.0</wave_align_gain>
+
+        <!-- ✅ Heave (vertical) damping. World-Z force -c*vz, active across the
+             water-contact band. Keep UNDER critical (~14 N*s/m for this body)
+             so a dropped robot plunges in and bobs back like real water entry
+             instead of stopping dead and oozing down. Raise toward 12-14 if it
+             bobs too long; lower toward 4 for a livelier, splashier entry. -->
+        <heave_damping>2.0</heave_damping>
+
+        <!-- ✅ Quadratic vertical entry drag (-k*|vz|*vz). The v^2 term that
+             only bites at high impact speed (keeps a fast drop from launching),
+             negligible while gently floating. Raise (15-25) to tame a violent
+             entry; lower toward 0 for a deeper, faster plunge. -->
+        <heave_drag_quad>8.0</heave_drag_quad>
+
+<hydrodynamic_model>
+  <type>fossen</type>
+  <volume>${volume}</volume>
+
+  <added_mass>
+    0.5  0    0    0      0      0
+    0    0.5  0    0      0      0
+    0    0    1.0  0      0      0
+    0    0    0    0.005  0      0
+    0    0    0    0      0.005  0
+    0    0    0    0      0      0.005
+  </added_mass>
+
+  <linear_damping>
+    8.0  8.0  15.0  0.5  0.5  0.5
+  </linear_damping>
+
+  <quadratic_damping>
+    15.0  15.0  30.0  1.0  1.0  1.0
+  </quadratic_damping>
+
+</hydrodynamic_model>
+
+
+
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ==========================================
+       2. Wave Probe Plugin 
+       ========================================== -->
+  <xacro:macro name="wave_probe_plugin" params="
+    plugin_name:=wave_probe
+    namespace:=''
+    L:=1.0
+    z_offset:=0.0
+    bound_link:=base_link
+    wavefield_name:=nezha_ocean_waves">  
+    <gazebo>
+      <plugin name="${plugin_name}" filename="libnezha_wave_probe_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <L>${L}</L>
+        <zTopOffset>${z_offset}</zTopOffset>
+        <boundName>${bound_link}</boundName>
+        <wavefieldCandidate>${wavefield_name}</wavefieldCandidate>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ==========================================
+       2b. Transmedia Drag Plugin
+       (piecewise-CTR air/entry/exit drag, driven by the
+        wave-probe phase service transmedia/get_phase_sample)
+       ========================================== -->
+  <xacro:macro name="transmedia_drag_plugin" params="
+    namespace
+    link_name
+    update_rate:=200.0
+    ctr_scale:=1.0
+    drag_topic:=transmedia_drag
+    debug:=false">
+    <gazebo>
+      <plugin name="transmedia_drag" filename="libnezha_transmedia_drag_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <baseLinkName>${link_name}</baseLinkName>
+        <updateRate>${update_rate}</updateRate>
+        <ctrScale>${ctr_scale}</ctrScale>
+        <!-- Relative name -> resolves to /${namespace}/transmedia/get_phase_sample,
+             which is exactly what the wave-probe plugin advertises. -->
+        <surfaceZService>transmedia/get_phase_sample</surfaceZService>
+        <!-- entryJson / exitJson / aboveJson default to the JSONs shipped in
+             nezha_plugins/Settings/Transmeida_liftdrag_force, so they are left
+             unset here. Override via <entryJson>...</entryJson> if needed. -->
+        <dragTopic>${drag_topic}</dragTopic>
+        <alwaysPublish>true</alwaysPublish>
+        <debug>${debug}</debug>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ==========================================
+       3. Robot State Plugin
+       ========================================== -->
+  <xacro:macro name="RobotStatePlugin" params="model_namespace">
+    <gazebo>
+      <plugin name="RobotStatePlugin" filename="libnezha_robot_state_plugin.so">
+        <namespace>${model_namespace}</namespace>
+        <default_current_velocity>0.0</default_current_velocity>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ==========================================
+       4. Terrain Detector
+       ========================================== -->
   <xacro:macro name="terrain_detector_macro" 
                params="robot_namespace 
                        link_name:=base_link 
@@ -37,16 +202,18 @@
         <terrainPubTopic>${topic_name}</terrainPubTopic>
         <xacro:if value="${extra_keywords != ''}">
           <waterKeywords>${extra_keywords}</waterKeywords>
-            <waterSurfaceLevel>0.0</waterSurfaceLevel>
-  <surfaceTolerance>0.2</surfaceTolerance>
-    <ktIgeGainPubTopic>kt_ige_gain</ktIgeGainPubTopic>
-  <kqIgeGainPubTopic>kq_ige_gain</kqIgeGainPubTopic>
+          <waterSurfaceLevel>0.0</waterSurfaceLevel>
+          <surfaceTolerance>0.2</surfaceTolerance>
+          <ktIgeGainPubTopic>kt_ige_gain</ktIgeGainPubTopic>
+          <kqIgeGainPubTopic>kq_ige_gain</kqIgeGainPubTopic>
         </xacro:if>
       </plugin>
     </gazebo>
   </xacro:macro>
-  
-  
+
+  <!-- ==========================================
+       5. Base Link Construction Macro
+       ========================================== -->
   <xacro:macro name="nezha_UAV_UUV_complete" 
     params="namespace mass body_width body_height use_mesh_file mesh_file 
             inertial_reference_frame debug *body_inertia">
@@ -84,6 +251,8 @@
         </geometry>
       </collision>
     </link>
+
+    <!-- Multirotor Base Plugin (Propellers) -->
     <gazebo>
       <plugin filename="librotors_gazebo_multirotor_base_plugin.so" 
               name="multirotor_base_plugin">
@@ -92,240 +261,53 @@
         <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
       </plugin>
     </gazebo>
-    <gazebo>
-      <plugin name="nezha_underwater_plugin" filename="libnezha_underwater_plugin.so">
-        <fluid_density>1028.0</fluid_density>
-        <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
-        <debug>${debug}</debug>
-        <xacro:nezha_underwater_model namespace="${namespace}"/>
-      </plugin>
-    </gazebo>
   </xacro:macro>
-<xacro:macro name="nezha_underwater_model" params="namespace">
-        <link name="${namespace}/base_link">
-            <neutrally_buoyant>0</neutrally_buoyant>
+  <!-- ==========================================
+       ✅ MAIN APPLICATION MACRO
+       ========================================== -->
+  <xacro:macro name="apply_nezha_plugins" params="
+    namespace
+    target_link:=base_link
+    wave_model:=nezha_ocean_waves
+    debug:=false
+  ">
+    
+    <!-- 1. Unified Hydrodynamics Plugin -->
+    <xacro:unified_hydrodynamics_plugin
+        namespace="${namespace}"
+        link_name="${target_link}"
+        wave_model="${wave_model}"
+        volume="${volume}"
+    />
 
-            <box>
-                <width>0.05</width>
-                <length>0.15</length>
-                <height>0.11</height>
-            </box>
-            <center_of_buoyancy>${cob}</center_of_buoyancy>
-<hydrodynamic_model>
-    <type>fossen</type>
-                <volume>${volume}</volume>
-<added_mass>
-    0.05  0     0     0       0       0
-    0     0.05  0     0       0       0
-    0     0     0.1   0       0       0
-    0     0     0     0.0005  0       0
-    0     0     0     0       0.0005  0
-    0     0     0     0       0       0.0005
-</added_mass>
-<linear_damping>
-    2.0 2.0 5.0 0.2 0.2 0.2
-</linear_damping>
-<quadratic_damping>
-    5.0 5.0 10.0 0.5 0.5 0.5
-</quadratic_damping>
+    <!-- 2. Wave Probe -->
+    <xacro:wave_probe_plugin
+      plugin_name="usv_wave_probe"
+      namespace="${namespace}"
+      L="2.5"
+      z_offset="0.1"
+      bound_link="${namespace}/${target_link}"
+      wavefield_name="${wave_model}::wavefield_entity"/>
 
+    <!-- 2b. Transmedia Drag (depends on the wave-probe phase service above) -->
+    <xacro:transmedia_drag_plugin
+      namespace="${namespace}"
+      link_name="${namespace}/${target_link}"
+      ctr_scale="1.0"
+      debug="${debug}"/>
 
-    <max_force>50.0</max_force>     
-    <max_torque>30.0</max_torque>   
-</hydrodynamic_model>
-        </link>
-    </xacro:macro>
-  
-  <xacro:macro name="wave_probe_plugin" params="
-    plugin_name:=wave_probe
-    namespace:=''
-    L:=1.0
-    z_offset:=0.0
-    bound_link:=base_link
-    wavefield_name:=nezha_ocean_waves">  
-    <gazebo>
-      <plugin name="${plugin_name}" filename="libnezha_wave_probe_plugin.so">
-        <robotNamespace>${namespace}</robotNamespace>
-        <L>${L}</L>
-        <zTopOffset>${z_offset}</zTopOffset>
-        <boundName>${bound_link}</boundName>
-        <wavefieldCandidate>${wavefield_name}</wavefieldCandidate>
-      </plugin>
-    </gazebo>
+    <!-- 3. Robot State Plugin -->
+    <xacro:RobotStatePlugin model_namespace="${namespace}"/>
+
+    <!-- 4. Terrain Detector -->
+    <xacro:terrain_detector_macro 
+      robot_namespace="$(arg namespace)" 
+      link_name="${namespace}/base_link"
+      update_rate="2.0"
+      extra_keywords="puddle,basin,aquarium"/>
+
   </xacro:macro>
-<xacro:macro name="phase_switch_plugin" params="
-  namespace:=rexrov
-  target_link:=base_link
-  update_rate:=50.0
-  transition_frames:=5
-  surface_plugin_name:=hydrodynamics_plugin
-  underwater_plugin_name:=nezha_underwater_plugin
-  surface_plugin_file:=libnezha_surface_plugin.so
-  underwater_plugin_file:=libnezha_underwater_plugin.so
-">
-  <gazebo>
-    <plugin name="phase_switch_plugin" 
-            filename="libnezha_phase_switch_plugin.so">
 
-      <robot_namespace>${namespace}</robot_namespace>
-      <target_link>${target_link}</target_link>
-
-      <update_rate>${update_rate}</update_rate>
-      <transition_frames>${transition_frames}</transition_frames>
-      
-      <surface_plugin_name>${surface_plugin_name}</surface_plugin_name>
-      <underwater_plugin_name>${underwater_plugin_name}</underwater_plugin_name>
-      
-      <surface_plugin_file>${surface_plugin_file}</surface_plugin_file>
-      <underwater_plugin_file>${underwater_plugin_file}</underwater_plugin_file>
-
-    </plugin>
-  </gazebo>
-  
-</xacro:macro>
-<!-- ========================================
-     Robot State Plugin Macro
-     ======================================== -->
-<xacro:macro name="RobotStatePlugin" params="model_namespace">
-  <gazebo>
-    <plugin name="RobotStatePlugin" filename="libnezha_robot_state_plugin.so">
-      <namespace>${model_namespace}</namespace>
-      <default_current_velocity>0.0</default_current_velocity>
-    </plugin>
-  </gazebo>
-</xacro:macro>
-
-<!-- ========================================
-     Hydrodynamics Plugin Macro
-     ======================================== -->
-<!-- ========================================
-     Hydrodynamics Plugin Macro
-     ======================================== -->
-<xacro:macro name="hydrodynamics_plugin" 
-             params="wave_model:='nezha_ocean_waves'
-                     debug:=false
-                     robot_volume:=${volume}
-                     buoyancy_scale:=1.0
-                     force_scale_factor:=1.0
-                     water_patch_length:=5.0
-                     water_patch_width:=5.0
-                     ">
-<gazebo>
-  <plugin name="hydrodynamics_plugin" filename="libnezha_surface_plugin.so">
-    <!-- 波浪模型 -->
-    <wave_model>nezha_ocean_waves</wave_model>
-    
-    <!-- 机器人体积 -->
-    <robot_volume>${volume}</robot_volume>
-    <buoyancy_scale>1.0</buoyancy_scale>
-    <force_scale_factor>0.5</force_scale_factor>
-<hydrodynamic_model>
-    <type>fossen</type>
-<added_mass>
-    0.05  0     0     0       0       0
-    0     0.05  0     0       0       0
-    0     0     0.1   0       0       0
-    0     0     0     0.0005  0       0
-    0     0     0     0       0.0005  0
-    0     0     0     0       0       0.0005
-</added_mass>
-<linear_damping>
-    2.0 2.0 5.0 0.2 0.2 0.2
-</linear_damping>
-<quadratic_damping>
-    5.0 5.0 10.0 0.5 0.5 0.5
-</quadratic_damping>
-
-    <max_force>50.0</max_force>      <!-- 从 100 → 50 -->
-    <max_torque>30.0</max_torque>    <!-- 从 100 → 30 -->
-</hydrodynamic_model>
-    
-    <!-- 水面网格 -->
-    <length>2.0</length>
-    <width>2.0</width>
-    
-    <!-- 可视化 -->
-    <markers>
-      <update_rate>30.0</update_rate>
-      <water_patch>false</water_patch>
-      <waterline>false</waterline>
-      <underwater_surface>false</underwater_surface>
-    </markers>
-  </plugin>
-</gazebo>
-</xacro:macro>
-
-<!-- ========================================
-     ✅ 统一的插件应用宏
-     ======================================== -->
-<!-- ========================================
-     ✅ 统一的插件应用宏
-     ======================================== -->
-<xacro:macro name="apply_nezha_plugins" params="
-  namespace
-  target_link:=base_link
-  wave_model:=nezha_ocean_waves
-  debug:=false
-">
-  
-  <xacro:hydrodynamics_plugin 
-    wave_model="${wave_model}"
-    debug="${debug}"
-    robot_volume="${volume}"
-    buoyancy_scale="${buoyancy_scale}"
-    force_scale_factor="${force_scale_factor}"
-    water_patch_length="1.0"
-    water_patch_width="1.0"/>
-  
-  <!-- ========================================
-       2️⃣ NUUV Fossen Plugin (水下动力学)
-       - 被 Phase Switch 控制
-       - 在 rexrov_spotlight.xacro 中已定义
-       - 名称为 "uuv_plugin"
-       ======================================== -->
-  <!-- 注意：NUUV 插件在主 URDF 文件中定义，这里不重复 -->
-  
-  <!-- ========================================
-       3️⃣ Phase Switch Plugin (相位切换控制器)
-       - 控制上述两个插件的启用/禁用
-       - 根据 WaveProbe 的相态信息自动切换
-       ======================================== -->
-  <xacro:phase_switch_plugin
-    namespace="${namespace}"
-    target_link="${target_link}"
-    update_rate="50.0"
-    transition_frames="5"
-    
-    surface_plugin_name="hydrodynamics_plugin"
-    underwater_plugin_name="nezha_underwater_plugin"
-    
-    surface_plugin_file="libnezha_surface_plugin.so"
-    underwater_plugin_file="libnezha_underwater_plugin.so"/>
-  
-  <!-- ========================================
-       4️⃣ Wave Probe Plugin (波浪探测)
-       - 提供实时的水面高度和相态信息
-       - Phase Switch 通过 ROS 服务查询此插件
-       ======================================== -->
-  <xacro:wave_probe_plugin 
-    plugin_name="usv_wave_probe"
-    namespace="${namespace}"
-    L="2.5"
-    z_offset="0.1"
-    bound_link="${namespace}/${target_link}"
-    wavefield_name="${wave_model}::wavefield_entity"/>
-  
-  <!-- ========================================
-       5️⃣ Robot State Plugin (机器人状态发布)
-       - 发布机器人的位姿、速度等信息
-       ======================================== -->
-  <xacro:RobotStatePlugin model_namespace="${namespace}"/>
-<xacro:terrain_detector_macro 
-  robot_namespace="$(arg namespace)" 
-  link_name="${namespace}/base_link"
-  update_rate="2.0"
-  extra_keywords="puddle,basin,aquarium"/>
-</xacro:macro>
 </robot>
 
 

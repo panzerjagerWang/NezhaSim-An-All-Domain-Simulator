@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 <robot name="nezha_rocket" xmlns:xacro="http://www.ros.org/wiki/xacro" >
 <!-- 1. 定义 / 传入参数 -->
 <xacro:property name="mass" value="0.001" /> <!-- [m] -->

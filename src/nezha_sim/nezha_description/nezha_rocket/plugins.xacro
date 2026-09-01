@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 
 <robot name="plugin" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <xacro:arg name="debug" default="false"/>
@@ -114,7 +120,7 @@
 <hydrodynamic_model>
     <type>fossen</type>
     
-    <!-- ✅ 修改 1: 大幅降低附加质量 (从 2.9 → 0.5) -->
+    <!-- Change 1: significantly reduce the added mass (from 2.9 to 0.5) -->
     <added_mass>
         0.5  0    0    0       0       0
         0    0.5  0    0       0       0
@@ -123,23 +129,23 @@
         0    0    0    0       0.005  0
         0    0    0    0       0       0.010
     </added_mass>
-    <!-- 原值 2.9 太大,降低到 0.5 (减少 80%) -->
+    <!-- The original value of 2.9 was too large; reduced to 0.5 (an 80% reduction) -->
 
-    <!-- ✅ 修改 2: 大幅增加线性阻尼 (从 30 → 80) -->
+    <!-- Change 2: significantly increase the linear damping (from 30 to 80) -->
     <linear_damping>
         80.0 60.0 150.0 5.0 8.0 8.0
-        <!-- Z轴从 20 → 150,增强垂直阻尼 -->
+        <!-- Z axis from 20 to 150, to strengthen the vertical damping -->
     </linear_damping>
 
-    <!-- ✅ 修改 3: 大幅增加二次阻尼 (从 25 → 60) -->
+    <!-- Change 3: significantly increase the quadratic damping (from 25 to 60) -->
     <quadratic_damping>
         60.0 50.0 120.0 20.0 25.0 25.0
-        <!-- Z轴从 20 → 120,高速时强力制动 -->
+        <!-- Z axis from 20 to 120, for strong braking at high speed -->
     </quadratic_damping>
 
-    <!-- ✅ 修改 4: 限制最大力 -->
-    <max_force>50.0</max_force>      <!-- 从 100 → 50 -->
-    <max_torque>30.0</max_torque>    <!-- 从 100 → 30 -->
+    <!-- Change 4: limit the maximum force -->
+    <max_force>50.0</max_force>      <!-- from 100 to 50 -->
+    <max_torque>30.0</max_torque>    <!-- from 100 to 30 -->
 </hydrodynamic_model>
         </link>
     </xacro:macro>
@@ -220,17 +226,17 @@
                      ">
 <gazebo>
   <plugin name="hydrodynamics_plugin" filename="libnezha_surface_plugin.so">
-    <!-- 波浪模型 -->
+    <!-- Wave model -->
     <wave_model>nezha_ocean_waves</wave_model>
-    
-    <!-- 机器人体积 -->
+
+    <!-- Robot volume -->
     <robot_volume>${volume}</robot_volume>
     <buoyancy_scale>1.0</buoyancy_scale>
     <force_scale_factor>0.5</force_scale_factor>
 <hydrodynamic_model>
     <type>fossen</type>
     
-    <!-- ✅ 修改 1: 大幅降低附加质量 (从 2.9 → 0.5) -->
+    <!-- Change 1: significantly reduce the added mass (from 2.9 to 0.5) -->
     <added_mass>
         0.5  0    0    0       0       0
         0    0.5  0    0       0       0
@@ -239,30 +245,30 @@
         0    0    0    0       0.005  0
         0    0    0    0       0       0.010
     </added_mass>
-    <!-- 原值 2.9 太大,降低到 0.5 (减少 80%) -->
+    <!-- The original value of 2.9 was too large; reduced to 0.5 (an 80% reduction) -->
 
-    <!-- ✅ 修改 2: 大幅增加线性阻尼 (从 30 → 80) -->
+    <!-- Change 2: significantly increase the linear damping (from 30 to 80) -->
     <linear_damping>
         80.0 60.0 150.0 5.0 8.0 8.0
-        <!-- Z轴从 20 → 150,增强垂直阻尼 -->
+        <!-- Z axis from 20 to 150, to strengthen the vertical damping -->
     </linear_damping>
 
-    <!-- ✅ 修改 3: 大幅增加二次阻尼 (从 25 → 60) -->
+    <!-- Change 3: significantly increase the quadratic damping (from 25 to 60) -->
     <quadratic_damping>
         60.0 50.0 120.0 20.0 25.0 25.0
-        <!-- Z轴从 20 → 120,高速时强力制动 -->
+        <!-- Z axis from 20 to 120, for strong braking at high speed -->
     </quadratic_damping>
 
-    <!-- ✅ 修改 4: 限制最大力 -->
-    <max_force>50.0</max_force>      <!-- 从 100 → 50 -->
-    <max_torque>30.0</max_torque>    <!-- 从 100 → 30 -->
+    <!-- Change 4: limit the maximum force -->
+    <max_force>50.0</max_force>      <!-- from 100 to 50 -->
+    <max_torque>30.0</max_torque>    <!-- from 100 to 30 -->
 </hydrodynamic_model>
-    
-    <!-- 水面网格 -->
+
+    <!-- Water surface mesh -->
     <length>2.0</length>
     <width>2.0</width>
     
-    <!-- 可视化 -->
+    <!-- Visualization -->
     <markers>
       <update_rate>30.0</update_rate>
       <water_patch>false</water_patch>
@@ -274,10 +280,10 @@
 </xacro:macro>
 
 <!-- ========================================
-     ✅ 统一的插件应用宏
+     Unified plugin application macro
      ======================================== -->
 <!-- ========================================
-     ✅ 统一的插件应用宏
+     Unified plugin application macro
      ======================================== -->
 <xacro:macro name="apply_nezha_plugins" params="
   namespace
@@ -287,9 +293,9 @@
 ">
   
   <!-- ========================================
-       1️⃣ NASV Hydrodynamics Plugin (水面动力学)
-       - 被 Phase Switch 控制
-       - 负责浮力、波浪力、阻力等
+       1. NASV Hydrodynamics Plugin (water-surface dynamics)
+       - Controlled by the Phase Switch
+       - Responsible for buoyancy, wave forces, drag, etc.
        ======================================== -->
   <xacro:hydrodynamics_plugin 
     wave_model="${wave_model}"
@@ -301,17 +307,17 @@
     water_patch_width="1.0"/>
   
   <!-- ========================================
-       2️⃣ NUUV Fossen Plugin (水下动力学)
-       - 被 Phase Switch 控制
-       - 在 rexrov_spotlight.xacro 中已定义
-       - 名称为 "uuv_plugin"
+       2. NUUV Fossen Plugin (underwater dynamics)
+       - Controlled by the Phase Switch
+       - Already defined in rexrov_spotlight.xacro
+       - Named "uuv_plugin"
        ======================================== -->
-  <!-- 注意：NUUV 插件在主 URDF 文件中定义，这里不重复 -->
+  <!-- Note: the NUUV plugin is defined in the main URDF file and is not repeated here -->
   
   <!-- ========================================
-       3️⃣ Phase Switch Plugin (相位切换控制器)
-       - 控制上述两个插件的启用/禁用
-       - 根据 WaveProbe 的相态信息自动切换
+       3. Phase Switch Plugin (phase-switching controller)
+       - Enables/disables the two plugins above
+       - Switches automatically based on phase information from the WaveProbe
        ======================================== -->
   <xacro:phase_switch_plugin
     namespace="${namespace}"
@@ -326,9 +332,9 @@
     underwater_plugin_file="libnezha_underwater_plugin.so"/>
   
   <!-- ========================================
-       4️⃣ Wave Probe Plugin (波浪探测)
-       - 提供实时的水面高度和相态信息
-       - Phase Switch 通过 ROS 服务查询此插件
+       4. Wave Probe Plugin (wave sensing)
+       - Provides real-time water-surface height and phase information
+       - The Phase Switch queries this plugin through a ROS service
        ======================================== -->
   <xacro:wave_probe_plugin 
     plugin_name="usv_wave_probe"
@@ -339,8 +345,8 @@
     wavefield_name="${wave_model}::wavefield_entity"/>
   
   <!-- ========================================
-       5️⃣ Robot State Plugin (机器人状态发布)
-       - 发布机器人的位姿、速度等信息
+       5. Robot State Plugin (robot state publishing)
+       - Publishes the robot's pose, velocity, and other information
        ======================================== -->
   <xacro:RobotStatePlugin model_namespace="${namespace}"/>
 <xacro:terrain_detector_macro 

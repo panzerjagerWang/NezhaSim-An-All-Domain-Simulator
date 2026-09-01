@@ -1,0 +1,144 @@
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
+<launch>
+  <!-- ================================================================================== -->
+  <!--                                   ARGUMENTS                                        -->
+  <!-- ================================================================================== -->
+  
+  <!-- Nezha Arguments -->
+  <arg name="mav_name" default="nezha_mini_cam"/>
+  <arg name="world_name" default="nezha_lake"/>
+  <arg name="enable_logging" default="false" />
+  <arg name="enable_ground_truth" default="true" />
+  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="debug" default="false"/>
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="true"/>
+  <arg name="verbose" default="false"/>
+  <arg name="set_timeout" default="false"/>
+
+  <!-- RexROV Arguments (Added) -->
+  <arg name="rexrov_namespace" default="rexrov"/>
+  <arg name="rexrov_mode" default="default"/>
+  <arg name="rexrov_x" default="10"/>
+  <arg name="rexrov_y" default="0"/>
+  <arg name="rexrov_z" default="-5"/> <!-- Spawning underwater -->
+  <arg name="rexrov_yaw" default="0"/>
+  
+  <!-- Splash screen arguments -->
+  <arg name="gif_path" default="$(find nezha_gazebo)/mesh/logo.gif"/>
+  <arg name="splash_duration" default="2500"/>  <!-- Duration in milliseconds -->
+  
+  <!-- ================================================================================== -->
+  <!--                                 ENVIRONMENT & WORLD                                -->
+  <!-- ================================================================================== -->
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find nezha_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+
+  <!-- Launch splash screen FIRST -->
+  <node name="splash_screen" 
+        pkg="nezha_gazebo" 
+        type="splash_screen.py" 
+        output="screen"
+        launch-prefix="bash -c 'sleep 0.5; $0 $@'">  <!-- Small delay to ensure it appears first -->
+    <param name="gif_path" value="$(arg gif_path)"/>
+    <param name="duration" value="$(arg splash_duration)"/>
+  </node>
+
+  <!-- Delay Gazebo launch to allow splash screen to appear -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/$(arg world_name).world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="false"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="$(arg debug)"/>
+    <arg name="verbose" value="true"/>
+  </include>
+
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+    
+  <node name="publish_world_models"
+        pkg="uuv_assistants"
+        type="publish_world_models.py"
+        output="screen">
+    <rosparam subst_value="true">
+      meshes:
+        lake:
+          mesh: package://uuv_gazebo_worlds/models/lake/meshes/LakeBottom.dae
+          model: lake
+    </rosparam>
+  </node>
+
+  <group if="$(arg set_timeout)">
+    <include file="$(find uuv_assistants)/launch/set_simulation_timer.launch">
+      <arg name="timeout" value="$(arg timeout)"/>
+    </include>
+  </group>
+
+  <!-- ================================================================================== -->
+  <!--                                  NEZHA MAV SETUP                                   -->
+  <!-- ================================================================================== -->
+  
+  <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+    <arg name="namespace" value="$(arg mav_name)"/>
+    <arg name="world_frame" value="world"/>
+    <arg name="child_frame_id" value="/$(arg mav_name)/base_link"/>
+  </include>
+  
+  <group ns="$(arg mav_name)">
+    <include file="$(find nezha_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <arg name="model" value="$(find nezha_description)/$(arg mav_name)/config/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="log_file" value="$(arg log_file)"/>
+    </include>
+    
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">
+      <rosparam command="load" file="$(find nezha_description)/$(arg mav_name)/config/lee_controller_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find nezha_description)/$(arg mav_name)/config/$(arg mav_name).yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+    </node>
+    
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+
+  <!-- ================================================================================== -->
+  <!--                                   REXROV SETUP                                     -->
+  <!-- ================================================================================== -->
+
+  <group ns="$(arg rexrov_namespace)">
+    <param name="robot_description"
+      command="$(find xacro)/xacro '$(find uuv_descriptions)/robots/rexrov_$(arg rexrov_mode).xacro' --inorder
+        debug:=$(arg debug)
+        namespace:=$(arg rexrov_namespace)
+        inertial_reference_frame:=world" />
+
+    <!-- Spawn the RexROV model -->
+    <node name="urdf_spawner" pkg="uuv_descriptions" type="spawn_model" respawn="false" output="screen"
+          args="-urdf -x $(arg rexrov_x) -y $(arg rexrov_y) -z $(arg rexrov_z) -R 0 -P 0 -Y $(arg rexrov_yaw) -model $(arg rexrov_namespace) -param /$(arg rexrov_namespace)/robot_description"/>
+
+    <!-- Publish robot state -->
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" respawn="true" output="screen">
+      <param name="robot_description" value="/$(arg rexrov_namespace)/robot_description" />
+      <param name="publish_frequency" value="5" />
+    </node>
+  </group>
+
+  <!-- Message to TF for RexROV -->
+  <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+    <arg name="namespace" value="$(arg rexrov_namespace)"/>
+    <arg name="world_frame" value="world"/>
+    <arg name="child_frame_id" value="/$(arg rexrov_namespace)/base_link"/>
+  </include>
+  
+</launch>
+
+

@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #ifndef ASV_PHASE_SWITCH_PLUGIN_HH
 #define ASV_PHASE_SWITCH_PLUGIN_HH
 
@@ -24,7 +30,7 @@ namespace asv
   class HydrodynamicsPlugin;
 }
 
-namespace gazebo
+namespace nezha
 {
 
     class HydrodynamicModelRegistry;  
@@ -122,7 +128,7 @@ struct Data
     double entryStartTime = 0.0; 
     double exitStartTime = 0.0;   
     double forceScaleFactor = 1.0;
-    bool forceScaleAppliedOnce = false; // 避免重复日志和无意义重复写
+    bool forceScaleAppliedOnce = false; // 
     ignition::math::Vector3d prevF = ignition::math::Vector3d::Zero;  
     ignition::math::Vector3d prevT = ignition::math::Vector3d::Zero;  
     
@@ -130,7 +136,8 @@ struct Data
     ignition::math::Vector3d flowVelWorld = ignition::math::Vector3d::Zero;  
     
     HydrodynamicsPlugin* surfacePlugin = nullptr;
-gazebo::HMFossen* fossenModel = nullptr;
+nezha::HMFossen* fossenModel = nullptr;
+
 
     
     std::string targetModelName;  

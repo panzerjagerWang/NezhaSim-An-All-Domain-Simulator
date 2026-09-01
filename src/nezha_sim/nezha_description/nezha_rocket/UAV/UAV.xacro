@@ -1,11 +1,17 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 
 <robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
   <!-- Included URDF Files -->
 
 
-  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/component_snippets.xacro" />
-  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/UAV_plugin.xacro" />
+  <xacro:include filename="$(find nezha_description)/common/UAV/component_snippets.xacro" />
+  <xacro:include filename="$(find nezha_description)/common/UAV/UAV_plugin.xacro" />
 
   <!-- Instantiate a controller. -->
   <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu" />

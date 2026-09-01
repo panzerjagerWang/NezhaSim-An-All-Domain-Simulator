@@ -1,12 +1,18 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 
 #ifndef __UUV_GAZEBO_HYDRO_MODEL_HH__
 #define __UUV_GAZEBO_HYDRO_MODEL_HH__
-// 1. ROS 核心
+// 1. ROS 
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 
-// 2. ROS 消息/服务
+// 2. ROS /
 #include <nezha_plugins/HydrodynamicsForces.h>
 
 // 3. Gazebo
@@ -16,7 +22,7 @@
 #include <gazebo/physics/Collision.hh>
 #include <gazebo/physics/Shape.hh>
 
-// 4. 标准库
+// 4. 
 #include <thread>
 #include <mutex>
 #include <string>
@@ -28,7 +34,7 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 
-// 6. 项目内部
+// 6. 
 #include <uuv_gazebo_plugins/Def.hh>
 #include "nuuv_buoyantObject.hh"
 
@@ -42,10 +48,13 @@
 #endif
 
 
-namespace gazebo
+namespace nezha
 {
+    using namespace gazebo; // <--- ADD THIS LINE
+    
     class HydrodynamicModel;
- class HydrodynamicModelRegistry
+    class HydrodynamicModelRegistry
+
     {
     public:
         static HydrodynamicModelRegistry& GetInstance()
@@ -72,18 +81,18 @@ class HydrodynamicModel : public BuoyantObject
 {
 protected:
     bool enabled_ = true;  
-        // ========== ROS Service 相关 ==========
+        // ========== ROS Service  ==========
     ros::NodeHandle* rosNode{nullptr};
     ros::ServiceServer forcesService;
     ros::CallbackQueue rosQueue;
     std::thread rosQueueThread;
     
-    // ========== 力数据存储 ==========
+    // ==========  ==========
     ignition::math::Vector3d lastBuoyancyForce{0,0,0};
     ignition::math::Vector3d lastDampingForce{0,0,0};
     ignition::math::Vector3d lastAddedMassForce{0,0,0};
     ignition::math::Vector3d lastCoriolisForce{0,0,0};
-    double lastSubmersionRatio{1.0};  // 水下默认完全浸没
+    double lastSubmersionRatio{1.0};  // 
 public:
     physics::LinkPtr GetLink() const { return this->link; }
     
@@ -140,7 +149,7 @@ public: const ForceReport& GetLastForceReport() const { return this->lastForceRe
   public: virtual void Print(std::string _paramName,
     std::string _message = std::string()) = 0;
 protected:
-    // ========== ✅ ROS Service 回调函数声明 ==========
+    // ========== ✅ ROS Service  ==========
     bool OnGetForcesService(
         nezha_plugins::HydrodynamicsForces::Request &req,
         nezha_plugins::HydrodynamicsForces::Response &res);
@@ -250,7 +259,7 @@ ignition::math::Vector3d ComputeBuoyancyForce();
 protected:
 
     
-    // ========== Service 回调函数 ==========
+    // ========== Service  ==========
     bool OnGetForcesService(
         nezha_plugins::HydrodynamicsForces::Request &req,
         nezha_plugins::HydrodynamicsForces::Response &res);

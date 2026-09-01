@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 
 #ifndef _ASV_WAVE_SIM_GAZEBO_PLUGINS_WAVEFIELD_MODEL_PLUGIN_HH_

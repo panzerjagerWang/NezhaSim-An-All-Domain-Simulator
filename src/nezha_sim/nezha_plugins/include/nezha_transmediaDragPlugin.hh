@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 // TransmediaDragPlugin.hh
 #pragma once
 
@@ -87,6 +93,11 @@ double zTopOffset{0.0};
   double      updateRate{200.0};
   bool        alwaysPublish{true};
   std::string robotNamespace;
+
+  // Debug logging. Enabled via <debug>true</debug> in the SDF. Throttled in
+  // OnUpdate so it does not flood the console.
+  bool        debugLog{false};
+  double      lastDebugTime{-1e9};
 
   // ROS
   std::unique_ptr<ros::NodeHandle> nh;

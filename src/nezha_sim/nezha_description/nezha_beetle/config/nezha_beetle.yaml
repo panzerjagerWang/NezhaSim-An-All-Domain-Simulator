@@ -1,3 +1,9 @@
+#
+# Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+# Shanghai Jiao Tong University, The Nezha Lab
+# Key Laboratory of Polar Ecosystem and Climate Change
+# State Key Laboratory of Submarine Geoscience
+#
 # Iris vehicle parameters
 mass: 1.5
 inertia: {xx: 0.035, xy: 0.0, xz: 0, yy: 0.045, yz: 0.0, zz: 0.01}

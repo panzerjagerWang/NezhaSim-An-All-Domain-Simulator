@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #include "nezha_robotStatePlugin.hh"
 #include "nezha_getWavefield.hh"
 
@@ -27,31 +33,32 @@ static bool WaitForClientExistence(ros::ServiceClient &client, const std::string
 
 template<typename Srv, typename Req>
 static void SafeAsyncCall(ros::ServiceClient &client, const std::string &name, const Req &req) {
-  if (!client) {
-    ROS_WARN_STREAM_THROTTLE(5.0, "[RobotStatePlugin] client uninitialized for " << name);
-    return;
-  }
-  if (!client.exists()) {
-    ROS_WARN_STREAM_THROTTLE(5.0, "[RobotStatePlugin] service " << name << " not available, skipping call");
+  if (!client || !client.exists()) {
+    // Don't spam warnings every frame
+    ROS_WARN_STREAM_THROTTLE(10.0, "[RobotStatePlugin] Service " << name << " unavailable.");
     return;
   }
 
-
+  // Copy data for the thread
   Srv srv;
-  srv.request = req; 
+  srv.request = req;
 
-  std::thread([client, srv, name]() mutable {
-    bool ok = false;
-    try {
-      ok = client.call(srv);
-    } catch (const std::exception &e) {
-      ROS_ERROR_STREAM("[RobotStatePlugin] exception when calling service " << name << ": " << e.what());
-    }
-    if (!ok) {
-      ROS_WARN_STREAM_THROTTLE(5.0, "[RobotStatePlugin] async call to " << name << " returned false");
-    }
-  }).detach();
+  // Use a detached thread, but catch system errors if thread creation fails
+  try {
+    std::thread([client, srv, name]() mutable {
+      try {
+        if (!client.call(srv)) {
+          ROS_DEBUG_STREAM("Service call to " << name << " failed (logic error).");
+        }
+      } catch (...) {
+        // Catch ROS connection drops
+      }
+    }).detach();
+  } catch (const std::system_error &e) {
+    ROS_ERROR_STREAM("[RobotStatePlugin] Failed to spawn thread: " << e.what());
+  }
 }
+
 
 
 
@@ -65,17 +72,17 @@ double RobotStatePlugin::QuerySurfaceZ(double x, double y) const
 
   double simTime = world_->SimTime().Double();
 
-  // 使用全局 GetWavefield
+  //  GetWavefield
   if (auto wf = asv::GetWavefield(world_)) {
-    // 使用 WavefieldSampler 的静态方法
+    //  WavefieldSampler 
     auto params = wf->GetParameters();
     if (params) {
       asv::Point3 point(x, y, 0.0);
       double depth = asv::WavefieldSampler::ComputeDepthDirectly(*params, point, simTime);
       
-      // depth 是从水面到点的深度，如果点在水面上方则为负
-      // 水面高度 = point.z + depth
-      double surfaceZ = 0.0 - depth;  // 假设参考点 z=0
+      // depth 
+      //  = point.z + depth
+      double surfaceZ = 0.0 - depth;  //  z=0
       
       static double lastPrintTime = 0.0;
       if (simTime - lastPrintTime > 1.0) {
@@ -117,7 +124,7 @@ bool RobotStatePlugin::BindWavefieldOnce()
   }
 #endif
 
-  // 如果没找到，尝试模糊匹配
+  // 
   if (!waveModel) {
 #if GAZEBO_MAJOR_VERSION >= 9
     for (auto const& m : world_->Models()) {
@@ -151,7 +158,7 @@ bool RobotStatePlugin::BindWavefieldOnce()
     return false;
   }
 
-  // 查找 link
+  //  link
   gazebo::physics::LinkPtr waveLink;
   auto links = waveModel->GetLinks();
   for (auto const& l : links) {
@@ -184,12 +191,18 @@ void RobotStatePlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
 
   std::string topic = "/wave/" + model_->GetName() + "/surface_z";
 
-  if (!ros::isInitialized()) {
-    int argc = 0;
-    ros::init(argc, nullptr, "gazebo_robot_state_plugin",
-              ros::init_options::NoSigintHandler | ros::init_options::AnonymousName);
-  }
-
+// NEW CODE (Thread-Safe)
+{
+    static std::mutex rosInitMutex; // Static ensures it's shared across instances
+    std::lock_guard<std::mutex> lock(rosInitMutex);
+    if (!ros::isInitialized()) {
+        int argc = 0;
+        char** argv = nullptr;
+        // Note: Use a generic name or AnonymousName to avoid conflicts
+        ros::init(argc, argv, "nezha_sim_node", 
+                 ros::init_options::NoSigintHandler | ros::init_options::AnonymousName);
+    }
+}
 
   std::string ns;
   if (_sdf->HasElement("namespace")) {
@@ -207,10 +220,10 @@ void RobotStatePlugin::Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf)
 
   InitSDFParameters(_sdf);
   InitServiceClients();
-  // 初始化 wavefield 绑定
+  //  wavefield 
   lastPrint_ = world_->SimTime();
   
-  // 尝试立即绑定
+  // 
   if (!BindWavefieldOnce()) {
     ROS_INFO("[RobotStatePlugin] WavefieldEntity not yet available. "
              "Will retry in OnUpdate...");
@@ -242,13 +255,13 @@ void RobotStatePlugin::InitSDFParameters(sdf::ElementPtr _sdf)
     if (_sdf->HasElement("wave_model_name")) {
     wave_model_name_ = _sdf->Get<std::string>("wave_model_name");
   } else {
-    wave_model_name_ = "ocean_waves";  // 默认值
+    wave_model_name_ = "ocean_waves";  // 
   }
   
   if (_sdf->HasElement("wave_link_name")) {
     wave_link_name_ = _sdf->Get<std::string>("wave_link_name");
   } else {
-    wave_link_name_ = "ocean_waves_link";  // 默认值
+    wave_link_name_ = "ocean_waves_link";  // 
   }
   
   ROS_INFO_STREAM("[RobotStatePlugin] Wave model: " << wave_model_name_ 
@@ -257,7 +270,6 @@ void RobotStatePlugin::InitSDFParameters(sdf::ElementPtr _sdf)
                   << " default_current_velocity=" << default_current_velocity_
                   << " updateInterval=" << updateInterval_);
 }
-ros::ServiceClient get_phase_client_;
 
 void RobotStatePlugin::InitServiceClients()
 {
@@ -278,11 +290,12 @@ void RobotStatePlugin::InitServiceClients()
   
 
   {
-    std::vector<std::string> candidates = {
-      model_ns + "/set_fluid_density",
-      "/hydrodynamics/set_fluid_density",
-      "set_fluid_density"
-    };
+  std::vector<std::string> candidates = {
+    model_ns + "/set_fluid_density",
+    model_ns + "/base_link/set_fluid_density", // <--- ADD THIS LINE
+    "/hydrodynamics/set_fluid_density",
+    "set_fluid_density"
+  };
     std::string found = tryServiceNames(candidates);
     if (!found.empty()) {
       fluid_density_client_ = nh_->serviceClient<uuv_gazebo_ros_plugins_msgs::SetFloat>(found);
@@ -293,11 +306,12 @@ void RobotStatePlugin::InitServiceClients()
 
 
   {
-    std::vector<std::string> candidates = {
-      model_ns + "/set_volume_scaling",
-      "/hydrodynamics/set_volume_scaling",
-      "set_volume_scaling"
-    };
+  std::vector<std::string> candidates = {
+    model_ns + "/set_volume_scaling",
+    model_ns + "/base_link/set_volume_scaling", // <--- ADD THIS LINE
+    "/hydrodynamics/set_volume_scaling",
+    "set_volume_scaling"
+  };
     std::string found = tryServiceNames(candidates);
     if (!found.empty()) {
       volume_scaling_client_ = nh_->serviceClient<uuv_gazebo_ros_plugins_msgs::SetFloat>(found);
@@ -325,6 +339,7 @@ void RobotStatePlugin::InitServiceClients()
   {
     std::vector<std::string> candidates = {
       model_ns + "/set_damping_scaling",
+      model_ns + "/base_link/set_damping_scaling",
       "/hydrodynamics/set_damping_scaling",
       "set_damping_scaling"
     };
@@ -370,8 +385,8 @@ void RobotStatePlugin::InitServiceClients()
 
   {
     std::vector<std::string> candidates = {
-      "/transmedia/get_phase_sample",
-      "transmedia/get_phase_sample",
+      "/nezha/get_phase_sample",
+      "nezha/get_phase_sample",
       "get_phase_sample"
     };
     std::string found = tryServiceNames(candidates);
@@ -386,9 +401,7 @@ void RobotStatePlugin::InitServiceClients()
 }
 
 
-
-
-bool QueryWaterPhase(std::string& phase, double& surfaceZ)
+bool RobotStatePlugin::QueryWaterPhase(std::string& phase, double& surfaceZ)
 {
   if (!get_phase_client_) {
     ROS_WARN_THROTTLE(5.0, "[RobotStatePlugin] get_phase_client_ uninitialized");
@@ -423,35 +436,54 @@ void RobotStatePlugin::OnUpdate()
       }
     }
   }
-
   common::Time now = world_->SimTime();
   if ((now - lastUpdateTime_).Double() < updateInterval_) return;
 
   auto pose = model_->WorldPose();
-  double x = pose.Pos().X();
-  double y = pose.Pos().Y();
-
-  double eta = QuerySurfaceZ(x, y);
-  surfaceZ_ = eta;
-
   double z = pose.Pos().Z();
   
+  // Get Wave Height
+  double eta = QuerySurfaceZ(pose.Pos().X(), pose.Pos().Y());
+  surfaceZ_ = eta;
 
-  bool targetDry = (z > eta );  
+  // HYSTERESIS LOGIC:
+  // Only change state if we cross the threshold significantly.
+  // This prevents flickering at the surface.
+  
+  bool should_be_dry = false;
 
-  if (targetDry != lastState_) {
-    if (targetDry) {
+  if (is_submerged_) {
+    // Currently underwater. Must go significantly ABOVE water to become dry.
+    if (z > (eta + hysteresis_threshold_)) {
+      should_be_dry = true;
+    } else {
+      should_be_dry = false; // Stay wet
+    }
+  } else {
+    // Currently dry. Must go significantly BELOW water to become submerged.
+    if (z < (eta - hysteresis_threshold_)) {
+      should_be_dry = false; // Go wet
+    } else {
+      should_be_dry = true; // Stay dry
+    }
+  }
+
+  // Only trigger services if the state ACTUALLY changes
+  if (should_be_dry != !is_submerged_) {
+    if (should_be_dry) {
+      // Transition to DRY
+      ROS_INFO_STREAM("[RobotStatePlugin] " << model_->GetName() << " -> DRY (z=" << z << ", eta=" << eta << ")");
       SetUnderwaterParams(0.0);
       SetThrusterEfficiency(0.0);
       SetCurrentVelocity(0.0, 0.0, 0.0);
-      lastState_ = true;
-      ROS_INFO("[RobotStatePlugin] → Switched to DRY state");
+      is_submerged_ = false;
     } else {
+      // Transition to UNDERWATER
+      ROS_INFO_STREAM("[RobotStatePlugin] " << model_->GetName() << " -> UNDERWATER (z=" << z << ", eta=" << eta << ")");
       SetUnderwaterParams(1.0);
       SetThrusterEfficiency(1.0);
       SetCurrentVelocity(default_current_velocity_, 0.0, 0.0);
-      lastState_ = false;
-      ROS_INFO("[RobotStatePlugin] → Switched to UNDERWATER state");
+      is_submerged_ = true;
     }
   }
 

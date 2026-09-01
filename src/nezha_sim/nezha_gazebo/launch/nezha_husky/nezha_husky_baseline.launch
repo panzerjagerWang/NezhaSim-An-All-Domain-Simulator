@@ -1,0 +1,129 @@
+<!--
+  XX-Husky BASELINE launch (Scenario A comparison).
+  Same world / wave field as the XXSim run, but the robot is the
+  nezha_husky_bl description: hydrodynamics come from the genuine
+  UUV_simulator plugin (ungated, no PSC) and the rotors use the genuine
+  RotorS motor model (no NSE). Used for the UUV_simulator + RotorS
+  baseline of Test Scenario A.
+
+  Derived from nezha_husky_withoutsensor.launch.
+-->
+<launch>
+  <arg name="mav_name" default="nezha_husky_bl"/>
+  <arg name="world_name" default="nezha_husky_test"/>
+  <arg name="enable_logging" default="false" />
+  <arg name="enable_ground_truth" default="true" />
+  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="debug" default="true"/>
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="true"/>
+  <arg name="verbose" default="false"/>
+  <arg name="set_timeout" default="false"/>
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find nezha_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+
+  <!-- 初始位置: land start on the asphalt_plane (at -9.1,0,0.6), near the first
+       UGV waypoint (x=-8.06) so the wheels start on solid ground. -->
+  <arg name="x" default="-8.5"/>
+  <arg name="y" default="0.0"/>
+  <arg name="z" default="1.3"/>
+  <arg name="yaw" default="0.0"/>
+  <!-- 控制器配置 -->
+  <arg name="enable_ekf" default="true"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/$(arg world_name).world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="false"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+    <arg name="verbose" value="$(arg verbose)"/>
+  </include>
+
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+
+  <node name="publish_world_models"
+      pkg="uuv_assistants"
+      type="publish_world_models.py"
+      output="screen">
+      <rosparam subst_value="true">
+          meshes:
+              lake:
+                  mesh: package://uuv_gazebo_worlds/models/lake/meshes/LakeBottom.dae
+                  model: lake
+      </rosparam>
+  </node>
+
+  <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+    <arg name="namespace" value="$(arg mav_name)"/>
+    <arg name="world_frame" value="world"/>
+    <arg name="child_frame_id" value="/$(arg mav_name)/base_link"/>
+  </include>
+
+  <group ns="$(arg mav_name)">
+
+    <include file="$(find nezha_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <arg name="model" value="$(find nezha_description)/$(arg mav_name)/config/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="log_file" value="$(arg log_file)"/>
+      <arg name="x" value="$(arg x)"/>
+      <arg name="y" value="$(arg y)"/>
+      <arg name="z" value="$(arg z)"/>
+    </include>
+
+    <!-- Real RotorS flight control for the aerial phase (genuine RotorS, no NSE). -->
+    <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">
+      <rosparam command="load" file="$(find nezha_description)/$(arg mav_name)/config/lee_controller_$(arg mav_name).yaml" />
+      <rosparam command="load" file="$(find nezha_description)/$(arg mav_name)/config/$(arg mav_name).yaml" />
+      <remap from="odometry" to="odometry_sensor1/odometry" />
+    </node>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+
+  <!-- ==================== 机器人命名空间 ==================== -->
+  <group ns="$(arg mav_name)">
+    <param name="laser_enabled" value="true"/>
+    <param name="laser_topic" value="front/scan"/>
+    <param name="laser_prefix" value="front"/>
+    <param name="laser_parent" value="top_plate_link"/>
+    <param name="laser_xyz" value="0.2206 0.0 0.00635"/>
+    <param name="laser_rpy" value="0.0 0.0 0.0"/>
+    <param name="laser_tower" value="1"/>
+
+    <!-- 加载控制器参数 -->
+    <rosparam command="load" file="$(find husky_control)/config/control.yaml" />
+
+    <!-- 启动控制器 -->
+    <node name="base_controller_spawner" pkg="controller_manager" type="spawner"
+          args="husky_joint_publisher husky_velocity_controller"/>
+
+    <rosparam param="wheel_radius_multiplier" ns="husky_velocity_controller" subst_value="True">
+      $(optenv HUSKY_WHEEL_MULTIPLIER 1.0)
+    </rosparam>
+
+    <!-- ==================== 定位（EKF） ==================== -->
+    <group if="$(arg enable_ekf)">
+      <node pkg="robot_localization" type="ekf_localization_node" name="ekf_localization">
+        <rosparam command="load" file="$(find husky_control)/config/localization.yaml" />
+      </node>
+    </group>
+
+    <!-- ==================== 速度命令多路复用 ==================== -->
+    <node name="twist_mux" pkg="twist_mux" type="twist_mux">
+      <rosparam command="load" file="$(find husky_control)/config/twist_mux.yaml"/>
+      <remap from="cmd_vel_out" to="husky_velocity_controller/cmd_vel"/>
+    </node>
+
+    <!-- NOTE: the model is spawned once by spawn_mav.launch above (at the land
+         start). The previous duplicate spawn_husky_model node was removed because
+         it raced the spawn_mav spawn and left the robot at the origin in water. -->
+
+    <node pkg="tf" type="static_transform_publisher" name="odom_to_base_footprint" args="0.0 0.0 0 0 0 0.0 /odom /base_footprint 10000"/>
+  </group>
+
+</launch>

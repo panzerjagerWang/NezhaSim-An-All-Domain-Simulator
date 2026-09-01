@@ -1,0 +1,94 @@
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
+<launch>
+  <arg name="mav_name" default="nezha_f_mav"/>
+  <arg name="world_name" default="nezha_lake"/>
+  <arg name="enable_logging" default="false" />
+  <arg name="enable_ground_truth" default="true" />
+  <arg name="log_file" default="$(arg mav_name)" />
+  <arg name="debug" default="false"/>
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="false"/>
+  <arg name="verbose" default="false"/>
+  <arg name="set_timeout" default="false"/>
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find nezha_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/$(arg world_name).world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="headless" value="false"/>
+    <arg name="debug" value="false"/>
+    <arg name="verbose" value="true"/>
+  </include>
+
+  <include file="$(find uuv_assistants)/launch/publish_world_ned_frame.launch"/>
+
+  <node name="publish_world_models"
+      pkg="uuv_assistants"
+      type="publish_world_models.py"
+      output="screen">
+      <rosparam subst_value="true">
+          meshes:
+              lake:
+                  mesh: package://uuv_gazebo_worlds/models/lake/meshes/LakeBottom.dae
+                  model: lake
+      </rosparam>
+  </node>
+
+  <group if="$(arg set_timeout)">
+    <include file="$(find uuv_assistants)/launch/set_simulation_timer.launch">
+      <arg name="timeout" value="$(arg timeout)"/>
+    </include>
+  </group>
+
+  <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+    <arg name="namespace" value="$(arg mav_name)"/>
+    <arg name="world_frame" value="world"/>
+    <arg name="child_frame_id" value="/$(arg mav_name)/base_link"/>
+  </include>
+
+  <group ns="$(arg mav_name)">
+    <include file="$(find nezha_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)" />
+      <!-- ✅ 关键修改：换用含 mavlink_interface 的模型文件 -->
+      <arg name="model" value="$(find nezha_description)/$(arg mav_name)/config/mav_generic_odometry_sensor.gazebo" />
+      <arg name="enable_logging" value="$(arg enable_logging)" />
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
+      <arg name="enable_mavlink_interface" value="true" />
+      <arg name="log_file" value="$(arg log_file)"/>
+    </include>
+
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher" />
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
+  </group>
+<node pkg="mavros" type="mavparam" name="mavparam_bat"
+      args="set BAT_CRIT_THR 0.0" output="screen"/>
+<node pkg="mavros" type="mavparam" name="mavparam_bat2"
+      args="set BAT_LOW_THR 0.0" output="screen"/>
+<node pkg="mavros" type="mavparam" name="mavparam_bat3"
+      args="set COM_LOW_BAT_ACT 0" output="screen"/>
+  <!-- ✅ MAVROS 用 rostopic:// 直接对接 mavlink_interface 插件 -->
+  <include file="$(find mavros)/launch/node.launch">
+    <arg name="pluginlists_yaml" value="$(find mavros)/launch/px4_pluginlists.yaml" />
+    <arg name="config_yaml" value="$(find mavros)/launch/px4_config.yaml" />
+    <arg name="fcu_url" value="/dev/ttyACM0:921600" />
+
+    <arg name="gcs_url" value="udp://@localhost" />
+    <arg name="tgt_system" value="1" />
+    <arg name="tgt_component" value="1" />
+  </include>
+
+  <!-- ✅ 启动 HITL Bridge 脚本 -->
+  <node name="hitl_bridge" pkg="nezha_gazebo" type="hitl_bridge.py" output="screen" />
+
+</launch>
+
+

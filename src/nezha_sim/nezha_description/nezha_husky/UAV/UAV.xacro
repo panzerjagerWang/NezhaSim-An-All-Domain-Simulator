@@ -1,21 +1,32 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 <robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
   <!-- Included URDF Files -->
-  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/component_snippets.xacro" />
-  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/UAV_plugin.xacro" />
+  <xacro:include filename="$(find nezha_description)/common/UAV/component_snippets.xacro" />
+  <xacro:include filename="$(find nezha_description)/common/UAV/UAV_plugin.xacro" />
+  <xacro:include filename="$(find nezha_description)/common/UAV/hitl_snippets.xacro" />
 
   <!-- 从 base.xacro 获取车体尺寸 -->
   <xacro:property name="base_z_size" value="0.24750000" />
   <xacro:property name="horizontal_arm_height" value="0.22" />  <!-- 10cm -->
 
-  <!-- 原有配置... -->
-  <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu" />
-  
-  <xacro:if value="$(arg enable_mavlink_interface)">
-    <xacro:default_mavlink_interface namespace="${namespace}" imu_sub_topic="imu" rotor_count="4" />
-  </xacro:if>
+  <!-- Non-HITL: RotorS controller + IMU. Disabled in HITL (real PX4 controls
+       and supplies sensors) to avoid topic/type clashes. -->
+  <xacro:unless value="$(arg enable_mavlink_interface)">
+    <xacro:controller_plugin_macro namespace="${namespace}" imu_sub_topic="imu" />
+    <xacro:default_imu namespace="${namespace}" parent_link="${namespace}/base_link" />
+  </xacro:unless>
 
-  <xacro:default_imu namespace="${namespace}" parent_link="${namespace}/base_link" />
+  <!-- HITL: PX4 sensor suite + GPS + mavlink_interface (UAV/flight mode of the
+       transmedia husky). For UGV (rover) HITL use PX4 rover firmware instead. -->
+  <xacro:if value="$(arg enable_mavlink_interface)">
+    <xacro:px4_hitl namespace="${namespace}" rotor_count="4" />
+  </xacro:if>
 
   <xacro:if value="$(arg enable_ground_truth)">
     <xacro:ground_truth_imu_and_odometry namespace="${namespace}" parent_link="${namespace}/base_link" />

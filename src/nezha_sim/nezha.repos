@@ -1,0 +1,43 @@
+#
+# Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+# Shanghai Jiao Tong University, The Nezha Lab
+# Key Laboratory of Polar Ecosystem and Climate Change
+# State Key Laboratory of Submarine Geoscience
+#
+# Upstream Git submodules used by the Nezha simulator. This manifest mirrors the
+# revisions recorded in the repository's .gitmodules/gitlinks for auditing or
+# for advanced workspace layouts that use vcstool. The patched ROS Noetic UUV
+# tree and catkin_simple are vendored separately and are intentionally absent.
+repositories:
+  rotors_simulator:
+    type: git
+    url: https://github.com/ethz-asl/rotors_simulator.git
+    version: cd813b7a8c37
+  mav_comm:
+    type: git
+    url: https://github.com/ethz-asl/mav_comm.git
+    version: 56122218eb1e
+  glog_catkin:
+    type: git
+    url: https://github.com/ethz-asl/glog_catkin.git
+    version: 40a9edadd15c
+  # PX4 SITL Gazebo-classic plugins (provides mavlink interface bits).
+  # NOTE: pulls a `mavlink` submodule — clone with `--recursive` or run
+  #       `git submodule update --init --recursive` after import.
+  mavlink_sitl_gazebo:
+    type: git
+    url: https://github.com/PX4/PX4-SITL_gazebo-classic.git
+    version: 85573181e8f5
+  # ASV wave field / hydrodynamics (Gazebo 11 branch).
+  asv_wave_sim:
+    type: git
+    url: https://github.com/srmainwaring/asv_wave_sim.git
+    version: 62ffdcfd2eec
+  gazebo_ros_link_attacher:
+    type: git
+    url: https://github.com/pal-robotics/gazebo_ros_link_attacher.git
+    version: 1d170c44c2f1
+  husky:
+    type: git
+    url: https://github.com/husky/husky.git
+    version: 41e15d283a8d955938204e79554a875264417bb9

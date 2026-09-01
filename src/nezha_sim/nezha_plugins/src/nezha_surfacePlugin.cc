@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #include "nezha_surfacePlugin.hh"
 #include "nasv_physics.hh"
 #include "asv_wave_sim_gazebo_plugins/CGALTypes.hh"
@@ -13,7 +19,7 @@
 #include <gazebo/physics/physics.hh>
 #include <gazebo/physics/MeshShape.hh>
 #include <gazebo/physics/Shape.hh>
-#include <sstream>  // ✅ 确保包含这个
+#include <sstream>  // ✅ 
 
 #include <ignition/math/Pose3.hh>
 #include <ignition/math/Triangle3.hh>
@@ -38,7 +44,7 @@ namespace {
     
     while (iss >> value) {
       output.push_back(value);
-      // 跳过可能的逗号分隔符
+      // 
       if (iss.peek() == ',') {
         iss.ignore();
       }
@@ -55,7 +61,7 @@ namespace asv
   HydrodynamicsPlugin* g_lastHydrodynamicsPlugin = nullptr;
 
   GZ_REGISTER_MODEL_PLUGIN(HydrodynamicsPlugin)
-// 辅助函数：手动创建一个细分的 Box 网格
+//  Box 
 void CreateTessellatedBox(const std::string& name, 
                           const ignition::math::Vector3d& size, 
                           const ignition::math::Vector3i& segments)
@@ -68,12 +74,12 @@ void CreateTessellatedBox(const std::string& name,
     gazebo::common::SubMesh *subMesh = new gazebo::common::SubMesh();
     mesh->AddSubMesh(subMesh);
 
-    // 半尺寸
+    // 
     double dx = size.X() / 2.0;
     double dy = size.Y() / 2.0;
     double dz = size.Z() / 2.0;
 
-    // 定义 6 个面的法线和轴向
+    //  6 
     // 0:X, 1:Y, 2:Z.  Direction: 1 or -1
     struct Face { int u_ax; int v_ax; int w_ax; double w_dir; int u_seg; int v_seg; };
     std::vector<Face> faces = {
@@ -95,15 +101,15 @@ void CreateTessellatedBox(const std::string& name,
         double u_step = u_len / face.u_seg;
         double v_step = v_len / face.v_seg;
 
-        // 生成顶点
+        // 
         for (int i = 0; i <= face.u_seg; ++i) {
             for (int j = 0; j <= face.v_seg; ++j) {
                 ignition::math::Vector3d pt;
-                // 设置 UVW 坐标
+                //  UVW 
                 double u = -u_len / 2.0 + i * u_step;
                 double v = -v_len / 2.0 + j * v_step;
                 
-                // 映射回 XYZ
+                //  XYZ
                 double coords[3];
                 coords[face.u_ax] = u;
                 coords[face.v_ax] = v;
@@ -113,7 +119,7 @@ void CreateTessellatedBox(const std::string& name,
             }
         }
 
-        // 生成索引 (两个三角形组成一个网格单元)
+        //  ()
         for (int i = 0; i < face.u_seg; ++i) {
             for (int j = 0; j < face.v_seg; ++j) {
                 int row_len = face.v_seg + 1;
@@ -122,7 +128,7 @@ void CreateTessellatedBox(const std::string& name,
                 int v2 = vertexOffset + (i + 1) * row_len + j;
                 int v3 = vertexOffset + (i + 1) * row_len + (j + 1);
 
-                // 确保法线朝外 (根据右手定则)
+                //  ()
                 if (face.w_dir > 0) {
                     subMesh->AddIndex(v0); subMesh->AddIndex(v2); subMesh->AddIndex(v1);
                     subMesh->AddIndex(v1); subMesh->AddIndex(v2); subMesh->AddIndex(v3);
@@ -166,7 +172,7 @@ void CreateCollisionMeshes(
       continue;
     }
     
-    // ============ 澶勭悊 collision ============
+    // ============  collision ============
     _links.push_back(link);
     std::vector<std::shared_ptr<Mesh>> linkMeshes;
     
@@ -212,40 +218,40 @@ void CreateCollisionMeshes(
         gzmsg << "      Vertices: " << mesh->number_of_vertices() << std::endl;
       }
       
-// ========== BOX_SHAPE 优化版 ==========
+// ========== BOX_SHAPE  ==========
 if (shape->HasType(physics::Base::EntityType::BOX_SHAPE))
 {
     physics::BoxShapePtr box = boost::dynamic_pointer_cast<physics::BoxShape>(shape);
     ignition::math::Vector3d size = box->Size();
 
-    // ✅ 智能分辨率策略
+    // ✅ 
     double res;
     double volume = size.X() * size.Y() * size.Z();
     
     if (volume < 0.5) {
-        res = 0.20;  // 小物体 (< 0.5 m³)
+        res = 0.20;  //  (< 0.5 m³)
     } else if (volume < 2.0) {
-        res = 0.30;  // 中型物体 (0.5-2 m³) ← 您的 rexrov 在这里
+        res = 0.30;  //  (0.5-2 m³) ←  rexrov 
     } else {
-        res = 0.50;  // 大型物体 (> 2 m³)
+        res = 0.50;  //  (> 2 m³)
     }
     
-    // 限制最大段数
+    // 
     int seg_x = std::max(2, std::min(40, static_cast<int>(std::ceil(size.X() / res))));
     int seg_y = std::max(2, std::min(40, static_cast<int>(std::ceil(size.Y() / res))));
     int seg_z = std::max(2, std::min(40, static_cast<int>(std::ceil(size.Z() / res))));
 
     ignition::math::Vector3i segments(seg_x, seg_y, seg_z);
 
-    // 生成唯一名字
+    // 
     static int box_counter = 0;
     std::string unique_suffix = std::to_string(box_counter++);
     std::string meshName = std::string(_model->GetName()) + "::box_" + unique_suffix;
 
-    // 创建细分网格
+    // 
     CreateTessellatedBox(meshName, size, segments);
 
-    // 保存并打印日志
+    // 
     if (common::MeshManager::Instance()->HasMesh(meshName))
     {
         const common::Mesh* gzMesh = common::MeshManager::Instance()->GetMesh(meshName);
@@ -387,8 +393,10 @@ if (shape->HasType(physics::Base::EntityType::BOX_SHAPE))
   class HydrodynamicsPluginPrivate
   {
     public: physics::WorldPtr world;
+    public: std::map<std::string, bool> forcesServiceRegistered;
 
     public: physics::ModelPtr model;
+    public: physics::LinkPtr baseLink;
 
     public: std::shared_ptr<const Wavefield> wavefield;
 
@@ -421,7 +429,7 @@ if (shape->HasType(physics::Base::EntityType::BOX_SHAPE))
 
     public: ignition::math::Vector3d lastTotalForce{0,0,0};
     public: ignition::math::Vector3d lastTotalTorque{0,0,0};
-        // ========== 新增 Fossen 模型参数 ==========
+        // ==========  Fossen  ==========
     public: Matrix6d Ma;
     public: Matrix6d DLin;
     public: Matrix6d DNonLin;
@@ -433,12 +441,12 @@ if (shape->HasType(physics::Base::EntityType::BOX_SHAPE))
     double offsetLinearDamping{0.0};
     double offsetNonLinDamping{0.0};
     
-    // 上次计算的加速度（用于附加质量力）
+    // 
     public: Vector6d lastVelRel;
     public: Vector6d filteredAcc;
     public: double lastTime{0.0};
-    public: common::Time lastDebugTime;        // 上次输出调试信息的时间
-    public: double debugOutputInterval{0.5};    // 调试输出间隔（秒）
+    public: common::Time lastDebugTime;        // 
+    public: double debugOutputInterval{0.5};    // 
       public: ros::NodeHandle* rosNode{nullptr};
   public: ros::ServiceServer forcesService;
   public: ros::CallbackQueue rosQueue;
@@ -487,7 +495,7 @@ HydrodynamicsPlugin::~HydrodynamicsPlugin()
         this->data->rosNode = nullptr;
     }
     
-    // 等待线程结束
+    // 
     if (this->data->rosQueueThread.joinable())
     {
         this->data->rosQueueThread.join();
@@ -526,27 +534,29 @@ void HydrodynamicsPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
 
   this->data->updateConnection = event::Events::ConnectWorldUpdateBegin(
     std::bind(&HydrodynamicsPlugin::OnUpdate, this));
-    // ========== 初始化 ROS Service ==========
-    if (!ros::isInitialized())
-    {
+{
+    static std::mutex rosInitMutex; // Static ensures it's shared across instances
+    std::lock_guard<std::mutex> lock(rosInitMutex);
+    if (!ros::isInitialized()) {
         int argc = 0;
-        char **argv = NULL;
-        ros::init(argc, argv, "gazebo_hydrodynamics", 
-                  ros::init_options::NoSigintHandler);
+        char** argv = nullptr;
+        // Note: Use a generic name or AnonymousName to avoid conflicts
+        ros::init(argc, argv, "nezha_sim_node", 
+                 ros::init_options::NoSigintHandler | ros::init_options::AnonymousName);
     }
-    
+}
     this->data->rosNode = new ros::NodeHandle("~");
     
-    // 创建 service
+    //  service
     std::string serviceName = "/" + this->data->model->GetName() + "/get_hydrodynamics_forces";
     
-// ✅ 正确 (注意包名是 nezha_plugins，有 s)
+// ✅  ( nezha_plugins s)
 ros::AdvertiseServiceOptions aso = 
     ros::AdvertiseServiceOptions::create<nezha_plugins::HydrodynamicsForces>(
         serviceName,
         boost::bind(&HydrodynamicsPlugin::OnGetForcesService, this, _1, _2),
         ros::VoidPtr(),
-        &this->data->rosQueue);  // ← 还要加 this->data->
+        &this->data->rosQueue);  // ←  this->data->
     
     this->data->forcesService = this->data->rosNode->advertiseService(aso);
       this->data->rosQueueThread = std::thread(
@@ -554,7 +564,7 @@ ros::AdvertiseServiceOptions aso =
   );
     gzmsg << "✓ Hydrodynamics Forces Service available at: " 
           << serviceName << std::endl;
-  // ========== Wave Model 閰嶇疆 ==========
+  // ========== Wave Model  ==========
   std::string rawWaveModel = Utilities::SdfParamString(*_sdf, "wave_model", "");
   
   bool isValid = true;
@@ -578,7 +588,7 @@ ros::AdvertiseServiceOptions aso =
   if (_sdf->HasElement("robot_volume")) {
     robotVolume = _sdf->Get<double>("robot_volume");
     gzmsg << " [Load] Read robot_volume from SDF: " << std::scientific 
-          << std::setprecision(4) << robotVolume << " m鲁" << std::endl;
+          << std::setprecision(4) << robotVolume << " m" << std::endl;
   } 
   
   // 2. buoyancy_scale
@@ -602,12 +612,12 @@ ros::AdvertiseServiceOptions aso =
     gzmsg << "  [Load] force_scale_factor not found, using default: " 
           << forceScaleFactor << std::endl;
   }
-  // ========== 读取 Fossen 模型参数 ==========
+  // ==========  Fossen  ==========
   if (_sdf->HasElement("hydrodynamic_model"))
   {
     sdf::ElementPtr hydroModel = _sdf->GetElement("hydrodynamic_model");
     
-    // 1. 附加质量矩阵 (36 个元素)
+    // 1.  (36 )
     if (hydroModel->HasElement("added_mass"))
     {
       std::vector<double> Ma_vec = Str2Vector(
@@ -623,19 +633,19 @@ ros::AdvertiseServiceOptions aso =
       }
     }
     
-    // 2. 线性阻尼矩阵
+    // 2. 
     if (hydroModel->HasElement("linear_damping"))
     {
       std::vector<double> D_vec = Str2Vector(
         hydroModel->Get<std::string>("linear_damping"));
       
-      if (D_vec.size() == 6) // 对角矩阵
+      if (D_vec.size() == 6) // 
       {
         this->data->DLin.setZero();
         for (int i = 0; i < 6; i++)
           this->data->DLin(i, i) = D_vec[i];
       }
-      else if (D_vec.size() == 36) // 完整矩阵
+      else if (D_vec.size() == 36) // 
       {
         for (int i = 0; i < 6; i++)
           for (int j = 0; j < 6; j++)
@@ -645,7 +655,7 @@ ros::AdvertiseServiceOptions aso =
       gzmsg << "✓ Loaded Linear Damping Matrix" << std::endl;
     }
     
-    // 3. 非线性阻尼矩阵
+    // 3. 
     if (hydroModel->HasElement("quadratic_damping"))
     {
       std::vector<double> Dq_vec = Str2Vector(
@@ -667,7 +677,7 @@ ros::AdvertiseServiceOptions aso =
       gzmsg << "✓ Loaded Quadratic Damping Matrix" << std::endl;
     }
     
-    // 4. 缩放因子
+    // 4. 
     if (hydroModel->HasElement("scaling_added_mass"))
       this->data->scalingAddedMass = hydroModel->Get<double>("scaling_added_mass");
     
@@ -682,7 +692,7 @@ ros::AdvertiseServiceOptions aso =
     this->data->DNonLin.setZero();
   }
   
-  // 初始化状态变量
+  // 
   this->data->lastVelRel.setZero();
   this->data->filteredAcc.setZero();
   this->data->lastTime = 0.0;
@@ -754,10 +764,85 @@ gzmsg << "\n";
   gzmsg << "Status:             " << (robotVolume > 0.0 ? "ENABLED" : "DISABLED") << "\n";
   gzmsg << "========================================\n";
   gzmsg << std::endl;
+  this->RegisterForcesService();
+}
+
+void HydrodynamicsPlugin::RegisterForcesService() {
+    if (!this->data->rosNode) {
+        this->data->rosNode = new ros::NodeHandle("~");
+    }
+    
+    std::string modelName = this->data->model->GetName();
+    std::string serviceName = "/" + modelName + "/get_hydrodynamics_forces";
+    
+    // Check if already registered
+    if (this->data->forcesServiceRegistered[serviceName]) {
+        gzmsg << "Service already registered: " << serviceName << std::endl;
+        return;
+    }
+    
+    ros::AdvertiseServiceOptions aso = 
+        ros::AdvertiseServiceOptions::create<nezha_plugins::HydrodynamicsForces>(
+            serviceName,
+            boost::bind(&HydrodynamicsPlugin::OnGetForcesService, this, _1, _2),
+            ros::VoidPtr(),
+            &this->data->rosQueue);
+    
+    this->data->forcesService = this->data->rosNode->advertiseService(aso);
+    this->data->forcesServiceRegistered[serviceName] = true;
+    
+    gzmsg << "✓ HydrodynamicsPlugin Service registered: " << serviceName << std::endl;
+}
+bool HydrodynamicsPlugin::OnGetForcesService(
+    nezha_plugins::HydrodynamicsForces::Request &req,
+    nezha_plugins::HydrodynamicsForces::Response &res) {
+    
+    // Buoyancy Force
+    res.buoyancy_x = this->data->lastBuoyancyForce.X();
+    res.buoyancy_y = this->data->lastBuoyancyForce.Y();
+    res.buoyancy_z = this->data->lastBuoyancyForce.Z();
+    
+    // Damping Force
+    res.damping_x = this->data->lastDampingForce.X();
+    res.damping_y = this->data->lastDampingForce.Y();
+    res.damping_z = this->data->lastDampingForce.Z();
+    
+    // Wave Force
+    res.wave_x = this->data->lastWaveForce.X();
+    res.wave_y = this->data->lastWaveForce.Y();
+    res.wave_z = this->data->lastWaveForce.Z();
+    
+    // Added Mass Force
+    res.added_mass_x = this->data->lastAddedMassForce.X();
+    res.added_mass_y = this->data->lastAddedMassForce.Y();
+    res.added_mass_z = this->data->lastAddedMassForce.Z();
+    
+    // Coriolis Force
+    res.coriolis_x = this->data->lastCoriolisForce.X();
+    res.coriolis_y = this->data->lastCoriolisForce.Y();
+    res.coriolis_z = this->data->lastCoriolisForce.Z();
+    
+    // Submersion Ratio
+    res.submersion_ratio = this->data->lastSubmersionRatio;
+    
+    // Sim Time
+    if (this->data->world) {
+        res.sim_time = this->data->world->SimTime().Double();
+    } else {
+        res.sim_time = 0.0;
+    }
+    
+    return true;
 }
 
 
-
+// ROS queue thread:
+void HydrodynamicsPlugin::QueueThread() {
+    static const double timeout = 0.01;
+    while (this->data->rosNode) {
+        this->data->rosQueue.callAvailable(ros::WallDuration(timeout));
+    }
+}
 void HydrodynamicsPlugin::OnUpdate()
 {
   if (!this->enabled_) {
@@ -771,14 +856,17 @@ void HydrodynamicsPlugin::UpdatePhysics()
 {
   if (!this->enabled_) return;
   
-  // ========== 1. 获取 base_link ==========
-  physics::LinkPtr baseLink;
-  for (const auto& link : this->data->model->GetLinks())
+  physics::LinkPtr baseLink = this->data->baseLink;
+  if (!baseLink)
   {
-    if (link->GetName().find("base_link") != std::string::npos)
+    for (const auto& link : this->data->model->GetLinks())
     {
-      baseLink = link;
-      break;
+      if (link->GetName().find("base_link") != std::string::npos)
+      {
+        baseLink = link;
+        this->data->baseLink = link;
+        break;
+      }
     }
   }
   
@@ -788,7 +876,7 @@ void HydrodynamicsPlugin::UpdatePhysics()
     return;
   }
   
-  // ========== 2. 计算浸没比例 ==========
+  // ========== 2.  ==========
   double submersionRatio = 0.0;
   int totalTriangles = 0;
   int submergedTriangles = 0;
@@ -797,14 +885,15 @@ void HydrodynamicsPlugin::UpdatePhysics()
   {
     if (!hd->link || !hd->wavefieldSampler) continue;
     
-    hd->wavefieldSampler->ApplyPose(hd->link->WorldPose());
+    const auto linkPose = hd->link->WorldPose();
+    hd->wavefieldSampler->ApplyPose(linkPose);
     hd->wavefieldSampler->UpdatePatch();
     
     for (size_t j = 0; j < hd->linkMeshes.size(); ++j)
     {
       if (!hd->hydrodynamics[j]) continue;
       
-      ApplyPose(hd->link->WorldPose(), *hd->initLinkMeshes[j], *hd->linkMeshes[j]);
+      ApplyPose(linkPose, *hd->initLinkMeshes[j], *hd->linkMeshes[j]);
       
       hd->hydrodynamics[j]->Update(
         hd->wavefieldSampler,
@@ -823,20 +912,20 @@ void HydrodynamicsPlugin::UpdatePhysics()
     submersionRatio = static_cast<double>(submergedTriangles) / totalTriangles;
     submersionRatio = std::max(0.0, std::min(1.0, submersionRatio));
   }
-  
-  // 浮力修正系数（带平滑）
+
+  // 
   double hydroCorrection = submersionRatio;
   const double smoothFactor = 0.2;
-  
+
   if (this->data->hydroData.size() > 0)
   {
     auto& firstLinkData = this->data->hydroData[0];
-    hydroCorrection = (1.0 - smoothFactor) * firstLinkData->lastBuoyancyCorrection 
+    hydroCorrection = (1.0 - smoothFactor) * firstLinkData->lastBuoyancyCorrection
                     + smoothFactor * hydroCorrection;
     firstLinkData->lastBuoyancyCorrection = hydroCorrection;
   }
   
-  // ========== 3. 获取运动状态 ==========
+  // ========== 3.  ==========
   ignition::math::Pose3d pose = baseLink->WorldPose();
   ignition::math::Vector3d linVel = baseLink->RelativeLinearVel();
   ignition::math::Vector3d angVel = baseLink->RelativeAngularVel();
@@ -849,7 +938,7 @@ void HydrodynamicsPlugin::UpdatePhysics()
   velRelBody << velRel.X(), velRel.Y(), velRel.Z(),
                 angVel.X(), angVel.Y(), angVel.Z();
   
-  // ========== 4. 计算加速度 ==========
+  // ========== 4.  ==========
   double currentTime = this->data->world->SimTime().Double();
   double dt = currentTime - this->data->lastTime;
   
@@ -863,40 +952,40 @@ void HydrodynamicsPlugin::UpdatePhysics()
   this->data->lastVelRel = velRelBody;
   this->data->lastTime = currentTime;
   
-  // ========== 5. 计算 Fossen 模型各项力 ==========
+  // ========== 5.  Fossen  ==========
   
-  // 5.1 附加质量力
+  // 5.1 
   Matrix6d Ma_scaled = this->data->scalingAddedMass * this->data->Ma * hydroCorrection;
   Vector6d tauAddedMass = -Ma_scaled * this->data->filteredAcc;
   
-  // 5.2 科氏力
+  // 5.2 
   Matrix6d Ca;
   ComputeAddedCoriolisMatrix(velRelBody, Ma_scaled, Ca);
   Vector6d tauCoriolis = -Ca * velRelBody;
   
-  // 5.3 阻尼力
+  // 5.3 
   Matrix6d D;
   ComputeDampingMatrix(velRelBody, D);
   Vector6d tauDamping = -D * velRelBody * hydroCorrection;
   
-// 5.4 浮力 (✅ 修复方向问题)
+// 5.4  (✅ )
 double volume = this->data->hydroParams->MaxDisplacedVolume();
 double density = 1000.0;
 ignition::math::Vector3d gravity = this->data->world->Gravity();
 
-// ✅ 关键修复: 浮力应该直接向上 (世界坐标系 +Z)
+// ✅ :  ( +Z)
 double buoyancyMagnitude = density * volume * std::abs(gravity.Z()) * hydroCorrection;
 ignition::math::Vector3d buoyancyWorld(0, 0, buoyancyMagnitude);
 
-// ✅ 不要转换到 Body Frame,直接在世界坐标系施加
+// ✅  Body Frame,
 // ignition::math::Vector3d buoyancyBody = pose.Rot().RotateVectorReverse(buoyancyWorld);
 
-// ========== 6. 合成总力 (不包含浮力,浮力单独施加) ==========
+// ========== 6.  (,) ==========
 Vector6d tauTotal = tauAddedMass + tauCoriolis + tauDamping;
 
   
-  // ========== 6. 合成总力 (包含浮力) ==========
-// ✅ 分离浮力和水动力
+  // ========== 6.  () ==========
+// ✅ 
 ignition::math::Vector3d hydroForce(
   tauTotal(0), tauTotal(1), tauTotal(2)
 );
@@ -905,15 +994,15 @@ ignition::math::Vector3d totalTorque(
   tauTotal(3), tauTotal(4), tauTotal(5)
 );
 
-// ========== 7. 施加力到 base_link ==========
-// ✅ 浮力在世界坐标系施加 (向上)
+// ========== 7.  base_link ==========
+// ✅  ()
 baseLink->AddForce(buoyancyWorld);
 
-// ✅ 水动力在 Body Frame 施加
+// ✅  Body Frame 
 baseLink->AddRelativeForce(hydroForce);
 baseLink->AddRelativeTorque(totalTorque);
   
-  // ========== 8. 保存力数据 (用于 ROS Service) ==========
+  // ========== 8.  ( ROS Service) ==========
 this->data->lastBuoyancyForce = buoyancyWorld;
 
   this->data->lastAddedMassForce.Set(tauAddedMass(0), tauAddedMass(1), tauAddedMass(2));
@@ -923,25 +1012,22 @@ this->data->lastBuoyancyForce = buoyancyWorld;
 this->data->lastTotalForce = hydroForce + buoyancyWorld;
 this->data->lastTotalTorque = totalTorque;
   
-// ========== 9. 波浪力 ==========
+// ========== 9.  ==========
 ignition::math::Vector3d totalWaveDrag(0, 0, 0);
 ignition::math::Vector3d totalWaveTorque(0, 0, 0);
 
-// ========== 获取全局水面高度 ==========
+// ==========  ==========
 double globalWaterLevel = 0.0;
 double depth = 0.0;
 double waveScale = 0.0;
 
-// 尝试从 Wavefield 获取精确水面高度
+//  Wavefield 
 if (this->data->wavefield && this->data->hydroData.size() > 0)
 {
     try {
         auto& hd = this->data->hydroData[0];
         if (hd->wavefieldSampler)
         {
-            hd->wavefieldSampler->ApplyPose(pose);
-            hd->wavefieldSampler->UpdatePatch();
-            
             auto waterPatch = hd->wavefieldSampler->GetWaterPatch();
             if (waterPatch && waterPatch->GetCellCount()[0] > 0 && waterPatch->GetCellCount()[1] > 0)
             {
@@ -960,219 +1046,154 @@ if (this->data->wavefield && this->data->hydroData.size() > 0)
 bool isWaveActive = std::abs(globalWaterLevel - this->data->lastGlobalWaterLevel) > 1e-6;
 this->data->lastGlobalWaterLevel = globalWaterLevel;
 
-// ========== 计算绝对深度 ==========
+// ==========  ==========
 double robotZ = pose.Pos().Z();
 depth = globalWaterLevel - robotZ;
 
-// ========== 计算波浪衰减系数 ==========
+// ==========  ==========
+// ==========  ==========
 const double WAVE_CUTOFF_DEPTH = 3.0;
-const double WAVE_INFLUENCE_HEIGHT = 0.5;  // ✅ 新增
+const double WAVE_INFLUENCE_HEIGHT = 0.5;  // ✅ 
 const double waveLength = 2.0;
 const double waveNumber = 2.0 * M_PI / waveLength;
 
-// ✅ 修复条件判断
-if (depth >= -WAVE_INFLUENCE_HEIGHT && depth <= WAVE_CUTOFF_DEPTH)
-{
-    if (depth < 0) {
-        // ✅ 水面上方: 线性衰减
-        waveScale = 1.0 + (depth / WAVE_INFLUENCE_HEIGHT);
-    } else {
-        // 水面下方: 指数衰减
-        waveScale = std::exp(-waveNumber * depth);
-    }
-    
-    waveScale = std::clamp(waveScale, 0.0, 1.0);
-}
-else
-{
-    waveScale = 0.0;
+// ✅ FIX: Actually calculate the waveScale based on depth!
+if (depth > WAVE_CUTOFF_DEPTH) {
+    waveScale = 0.0; // Too deep, no wave influence
+} else if (depth < -WAVE_INFLUENCE_HEIGHT) {
+    waveScale = 0.0; // Too high above water, no wave influence
+} else {
+    // Exponential decay of wave energy based on depth (Deep water wave approximation)
+    waveScale = std::exp(-waveNumber * std::max(0.0, depth));
 }
 
-// ========== 直接应用波浪力 ==========
-// ========== 直接应用波浪力 (✅ 修复归一化问题) ==========
-if (waveScale > 0.01 && isWaveActive)
-{
-    for (auto&& hd : this->data->hydroData)
-    {
+// FIXED: Apply wave forces directly to base_link
+if (waveScale > 0.01 && isWaveActive && baseLink) {
+
+    // Calculate total wave force from all submerged surfaces
+    ignition::math::Vector3d totalWaveDrag(0, 0, 0);
+    ignition::math::Vector3d totalWaveTorque(0, 0, 0);
+    
+    for (auto&& hd : this->data->hydroData) {
         if (!hd->link) continue;
         
-        for (size_t j = 0; j < hd->linkMeshes.size(); ++j)
-        {
+        for (size_t j = 0; j < hd->linkMeshes.size(); ++j) {
             if (!hd->hydrodynamics[j]) continue;
             
-            // ✅ 1. 获取原始波浪力（可能已经是累加值）
+            // Get raw wave forces (already in world frame from Hydrodynamics class)
             auto rawWaveForce  = ToIgn(hd->hydrodynamics[j]->Force());
             auto rawWaveTorque = ToIgn(hd->hydrodynamics[j]->Torque());
             
-            // ✅ 2. 关键修复：归一化处理
-double numSubmerged = hd->hydrodynamics[j]->GetSubmergedTriangles().size();
-double totalFaces = hd->linkMeshes[j]->number_of_faces();
-double ratio = (totalFaces > 0) ? (numSubmerged / totalFaces) : 0.0;
-
-if (numSubmerged > 0) 
-{
-    // 1. 绝对不要除以 numSubmerged
-    
-    // 2. (可选) 添加拍击系数：当浸没比例很低时(刚入水)，放大波浪力
-    double slappingFactor = 1.0;
-    if (ratio < 0.2 && ratio > 0.0) {
-        slappingFactor = 2.0; // 刚入水时，波浪冲击力翻倍，模拟 Slapping
-    }
-
-    rawWaveForce *= slappingFactor;
-    rawWaveTorque *= slappingFactor;
-}
+            // Normalize by submerged triangle count
+            double numSubmerged = hd->hydrodynamics[j]->GetSubmergedTriangles().size();
+            double totalFaces = hd->linkMeshes[j]->number_of_faces();
+            double ratio = (totalFaces > 0) ? (numSubmerged / totalFaces) : 0.0;
             
-            // ✅ 3. 应用深度衰减
+            if (numSubmerged > 0) {
+                // Apply slapping factor for shallow water entry
+                double slappingFactor = 1.0;
+                if (ratio < 0.2 && ratio > 0.0) {
+                    slappingFactor = 2.0; // Amplify impact at water entry
+                }
+                rawWaveForce *= slappingFactor;
+                rawWaveTorque *= slappingFactor;
+            }
+            
+            // Apply depth attenuation
             auto waveForce  = rawWaveForce  * waveScale;
             auto waveTorque = rawWaveTorque * waveScale;
             
-            // 力限幅（保持不变）
+            // Force clipping
             const double MAX_WAVE_FORCE = 500.0;
             const double MAX_WAVE_TORQUE = 100.0;
             
-            if (waveForce.Length() > MAX_WAVE_FORCE)
-            {
+            if (waveForce.Length() > MAX_WAVE_FORCE) {
                 waveForce = waveForce.Normalize() * MAX_WAVE_FORCE;
             }
-            
-            if (waveTorque.Length() > MAX_WAVE_TORQUE)
-            {
+            if (waveTorque.Length() > MAX_WAVE_TORQUE) {
                 waveTorque = waveTorque.Normalize() * MAX_WAVE_TORQUE;
             }
             
-            // 累加和施加（保持不变）
             totalWaveDrag += waveForce;
             totalWaveTorque += waveTorque;
-            
-            hd->link->AddForce(waveForce);
-            hd->link->AddTorque(waveTorque);
         }
     }
+    
+    // ✅ KEY FIX: Apply to baseLink instead of hd->link
+    if (totalWaveDrag.Length() > 1e-6) {
+        baseLink->AddForce(totalWaveDrag);
+    }
+    if (totalWaveTorque.Length() > 1e-6) {
+        baseLink->AddTorque(totalWaveTorque);
+    }
+    
+    this->data->lastWaveForce = totalWaveDrag;
 }
 
 
-// 保存数据
+
+// 
 this->data->lastWaveForce = totalWaveDrag;
 
 
   
-  // ========== 10. 调试输出 ==========
+  // ========== 10.  ==========
   common::Time currentSimTime = this->data->world->SimTime();
   double elapsedTime = (currentSimTime - this->data->lastDebugTime).Double();
   
-  if (elapsedTime >= this->data->debugOutputInterval)
-  {
-    this->data->lastDebugTime = currentSimTime;
-    
-    gzmsg << "\n+============================================================+" << std::endl;
-    gzmsg << "|  [Hydrodynamics] Time: " 
-          << std::fixed << std::setprecision(2) << std::setw(6) 
-          << currentSimTime.Double() << " s      |" << std::endl;
-    gzmsg << "+------------------------------------------------------------+" << std::endl;
-    
-    gzmsg << "|  === SUBMERSION STATUS ===                                 |" << std::endl;
-    gzmsg << "|  Submersion Ratio:    " 
-          << std::setw(6) << std::setprecision(1) << (submersionRatio * 100.0) 
-          << " %                        |" << std::endl;
-    gzmsg << "|  Hydro Correction:    " 
-          << std::setw(6) << std::setprecision(3) << hydroCorrection 
-          << "                              |" << std::endl;
-    gzmsg << "+------------------------------------------------------------+" << std::endl;
-    
-    gzmsg << "|  === FORCES ===                                            |" << std::endl;
-    gzmsg << "|  Added Mass:    [" 
-          << std::setw(8) << std::setprecision(2) << tauAddedMass(0) << ", "
-          << std::setw(8) << tauAddedMass(1) << ", "
-          << std::setw(8) << tauAddedMass(2) << "] N   |" << std::endl;
-    
-    gzmsg << "|  Coriolis:      [" 
-          << std::setw(8) << tauCoriolis(0) << ", "
-          << std::setw(8) << tauCoriolis(1) << ", "
-          << std::setw(8) << tauCoriolis(2) << "] N   |" << std::endl;
-    
-    gzmsg << "|  Damping:       [" 
-          << std::setw(8) << tauDamping(0) << ", "
-          << std::setw(8) << tauDamping(1) << ", "
-          << std::setw(8) << tauDamping(2) << "] N   |" << std::endl;
-    
-gzmsg << "|  Buoyancy:      [" 
-      << std::setw(8) << buoyancyWorld.X() << ", "  // ✅ 改为 buoyancyWorld
-      << std::setw(8) << buoyancyWorld.Y() << ", "
-      << std::setw(8) << buoyancyWorld.Z() << "] N   |" << std::endl;
-    
-    gzmsg << "|  Wave:          [" 
-          << std::setw(8) << totalWaveDrag.X() << ", "
-          << std::setw(8) << totalWaveDrag.Y() << ", "
-          << std::setw(8) << totalWaveDrag.Z() << "] N   |" << std::endl;
-    
-    gzmsg << "+------------------------------------------------------------+" << std::endl;
-    
-gzmsg << "+------------------------------------------------------------+" << std::endl;
 
-// ✅ 添加这一行 (在 1095 行之前)
-ignition::math::Vector3d displayTotalForce = hydroForce + buoyancyWorld;
-
-gzmsg << "|  Total Force:   [" 
-      << std::setw(8) << displayTotalForce.X() << ", "  // ✅ 使用 displayTotalForce
-      << std::setw(8) << displayTotalForce.Y() << ", "
-      << std::setw(8) << displayTotalForce.Z() << "] N   |" << std::endl;
-
-gzmsg << "+============================================================+\n" << std::endl;
-
-  }
 }
 double HydrodynamicsPlugin::ComputeDynamicWaveClamp(
     double _submersionRatio,
     const ignition::math::Vector3d& _velocity) const
 {
-    // ========== 基础限幅值 ==========
-    const double BASE_CLAMP = 500.0;  // 基准值
-    const double MIN_CLAMP = 50.0;    // 最小值(完全浸没)
-    const double MAX_CLAMP = 1000.0;  // 最大值(刚接触水面)
+    // ==========  ==========
+    const double BASE_CLAMP = 500.0;  // 
+    const double MIN_CLAMP = 50.0;    // ()
+    const double MAX_CLAMP = 1000.0;  // ()
     
-    // ========== 1. 根据浸没比例调整 ==========
-    // 浸没越深,限幅越小(因为波浪影响减弱)
+    // ========== 1.  ==========
+    // ,()
     double submersionFactor;
     if (_submersionRatio < 0.1) {
-        // 刚接触水面: 允许较大波浪力
+        // : 
         submersionFactor = 1.0;
     } else if (_submersionRatio < 0.5) {
-        // 部分浸没: 线性过渡
+        // : 
         submersionFactor = 1.0 - 0.6 * (_submersionRatio - 0.1) / 0.4;
     } else if (_submersionRatio < 0.9) {
-        // 大部分浸没: 快速衰减
+        // : 
         submersionFactor = 0.4 - 0.3 * (_submersionRatio - 0.5) / 0.4;
     } else {
-        // 完全浸没: 最小限幅
+        // : 
         submersionFactor = 0.1;
     }
     
-    // ========== 2. 根据速度调整 ==========
+    // ========== 2.  ==========
     double speed = _velocity.Length();
     double speedFactor;
     
     if (speed < 0.5) {
-        // 低速: 波浪力影响大
+        // : 
         speedFactor = 1.0;
     } else if (speed < 2.0) {
-        // 中速: 线性衰减
+        // : 
         speedFactor = 1.0 - 0.4 * (speed - 0.5) / 1.5;
     } else {
-        // 高速: 惯性主导,波浪力次要
+        // : ,
         speedFactor = 0.6 * std::exp(-0.3 * (speed - 2.0));
     }
     
-    // ========== 3. 合成动态限幅 ==========
+    // ========== 3.  ==========
     double dynamicClamp = BASE_CLAMP * submersionFactor * speedFactor;
     
-    // 确保在合理范围内
+    // 
     dynamicClamp = std::clamp(dynamicClamp, MIN_CLAMP, MAX_CLAMP);
     
     return dynamicClamp;
 }
 
-// 计算附加质量引起的科氏矩阵
+// 
 void HydrodynamicsPlugin::ComputeAddedCoriolisMatrix(
   const Vector6d& vel,
   const Matrix6d& Ma,
@@ -1194,16 +1215,16 @@ void HydrodynamicsPlugin::ComputeAddedCoriolisMatrix(
         Sa, Sb;
 }
 
-// 计算总阻尼矩阵
+// 
 void HydrodynamicsPlugin::ComputeDampingMatrix(
   const Vector6d& vel,
   Matrix6d& D) const
 {
-  // 线性阻尼
+  // 
   D = this->data->scalingDamping * 
       (this->data->DLin + this->data->offsetLinearDamping * Matrix6d::Identity());
   
-  // 非线性阻尼（对角项）
+  // 
   for (int i = 0; i < 6; i++)
   {
     D(i, i) += (this->data->DNonLin(i, i) + this->data->offsetNonLinDamping) * 
@@ -1413,7 +1434,7 @@ if (patchLength < 0.5) {
   gridResX = std::max(size_t(4), size_t(std::ceil(patchLength / 0.50)));  // 0.25→0.50
 }
 
-// Y 方向同样处理
+// Y 
 if (patchWidth < 0.5) {
   gridResY = std::max(size_t(6), size_t(std::ceil(patchWidth / 0.15)));
 } else if (patchWidth < 2.0) {
@@ -1422,9 +1443,9 @@ if (patchWidth < 0.5) {
   gridResY = std::max(size_t(4), size_t(std::ceil(patchWidth / 0.50)));
 }
 
-// ✅ 关键:降低最大分辨率上限
-gridResX = std::min(gridResX, size_t(16));  // 从 64 → 16
-gridResY = std::min(gridResY, size_t(16));  // 从 64 → 16
+// ✅ :
+gridResX = std::min(gridResX, size_t(16));  //  64 → 16
+gridResY = std::min(gridResY, size_t(16));  //  64 → 16
 
 gzmsg << "+------------------------------------------------------------+" << std::endl;
 gzmsg << "|  Adaptive Grid Resolution                                  |" << std::endl;
@@ -1440,7 +1461,7 @@ gzmsg << "|  Cell Size:    " << std::setw(5) << std::fixed << std::setprecision(
       << (patchWidth / gridResY) << " m            |" << std::endl;
 gzmsg << "+------------------------------------------------------------+" << std::endl;
 
-// ========== 鍒涘缓 Grid ==========
+// ==========  Grid ==========
 std::shared_ptr<Grid> initWaterPatch;
 try
 {
@@ -1535,9 +1556,9 @@ catch (const std::exception& e)
     gzmsg << "----------------------------------------" << std::endl;
   }
   
-  // ========== 鉁� 淇敼閮ㄥ垎缁撴潫 ==========
+  // ========== � ㄥ ==========
 
-  // ========== 缁熻鍜岄獙璇� ==========
+  // ========== � ==========
   size_t validLinks = 0;
 for (auto&& hd : this->data->hydroData)
 {
@@ -1828,54 +1849,7 @@ ignition::math::Vector3d HydrodynamicsPlugin::GetLastTotalTorque() const
     
     return this->data ? this->data->lastTotalTorque : ignition::math::Vector3d::Zero;
 }
-// ========== ROS Service 回调函数 ==========
-bool HydrodynamicsPlugin::OnGetForcesService(
-    nezha_plugins::HydrodynamicsForces::Request &req,
-    nezha_plugins::HydrodynamicsForces::Response &res)
-{
-    if (!this->enabled_)
-    {
-        gzwarn << "Hydrodynamics plugin is disabled, returning zero forces" << std::endl;
-        return true;
-    }
-    
-    // 填充响应
-    res.buoyancy_x = this->data->lastBuoyancyForce.X();
-    res.buoyancy_y = this->data->lastBuoyancyForce.Y();
-    res.buoyancy_z = this->data->lastBuoyancyForce.Z();
-    
-    res.damping_x = this->data->lastDampingForce.X();
-    res.damping_y = this->data->lastDampingForce.Y();
-    res.damping_z = this->data->lastDampingForce.Z();
-    
-    res.wave_x = this->data->lastWaveForce.X();
-    res.wave_y = this->data->lastWaveForce.Y();
-    res.wave_z = this->data->lastWaveForce.Z();
-    
-    res.added_mass_x = this->data->lastAddedMassForce.X();
-    res.added_mass_y = this->data->lastAddedMassForce.Y();
-    res.added_mass_z = this->data->lastAddedMassForce.Z();
-    
-    res.coriolis_x = this->data->lastCoriolisForce.X();
-    res.coriolis_y = this->data->lastCoriolisForce.Y();
-    res.coriolis_z = this->data->lastCoriolisForce.Z();
-    
-    res.submersion_ratio = this->data->lastSubmersionRatio;
-    res.sim_time = this->data->world->SimTime().Double();
-    
-    return true;
-}
 
-// ROS 回调队列处理线程
-void HydrodynamicsPlugin::QueueThread()
-{
-    static const double timeout = 0.01;
-    while (this->data->rosNode->ok())
-    {
-        this->data->rosQueue.callAvailable(ros::WallDuration(timeout));
-    }
-}
 
 } 
-
 

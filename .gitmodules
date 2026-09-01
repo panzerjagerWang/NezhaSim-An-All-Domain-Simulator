@@ -1,0 +1,21 @@
+[submodule "src/nezha_sim/third_party/asv_wave_sim"]
+	path = src/nezha_sim/third_party/asv_wave_sim
+	url = https://github.com/srmainwaring/asv_wave_sim.git
+[submodule "src/nezha_sim/third_party/gazebo_ros_link_attacher"]
+	path = src/nezha_sim/third_party/gazebo_ros_link_attacher
+	url = https://github.com/pal-robotics/gazebo_ros_link_attacher.git
+[submodule "src/nezha_sim/third_party/glog_catkin"]
+	path = src/nezha_sim/third_party/glog_catkin
+	url = https://github.com/ethz-asl/glog_catkin.git
+[submodule "src/nezha_sim/third_party/husky/husky"]
+	path = src/nezha_sim/third_party/husky/husky
+	url = https://github.com/husky/husky.git
+[submodule "src/nezha_sim/third_party/mav_comm"]
+	path = src/nezha_sim/third_party/mav_comm
+	url = https://github.com/ethz-asl/mav_comm.git
+[submodule "src/nezha_sim/third_party/mavlink_sitl_gazebo"]
+	path = src/nezha_sim/third_party/mavlink_sitl_gazebo
+	url = https://github.com/PX4/PX4-SITL_gazebo-classic.git
+[submodule "src/nezha_sim/third_party/rotors_simulator"]
+	path = src/nezha_sim/third_party/rotors_simulator
+	url = https://github.com/ethz-asl/rotors_simulator.git

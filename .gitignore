@@ -1,0 +1,20 @@
+# Catkin outputs and workspace-local metadata
+/build/
+/devel/
+/install/
+/logs/
+/.catkin_tools/
+
+# Assistant/editor state is local to a developer machine
+/.agents/
+/.claude/
+/.codex/
+/.idea/
+/.vscode/
+
+# Standard generated files
+**/__pycache__/
+*.py[cod]
+*.bag
+*.log
+.DS_Store

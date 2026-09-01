@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #include <cmath>  // 为 std::pow 函数
 #include <algorithm> // 为 std::upper_bound, std::copy_n, std::min 函数
 #include <array>  // 为 std::array 类型
@@ -181,6 +187,13 @@ if (_sdf->HasElement("kqGainPubTopic"))
   getSdfParam<double>(_sdf, "motorConstant", motor_constant_, motor_constant_);
   getSdfParam<std::string>(_sdf, "bladeType",  blade_type_,  blade_type_);
   getSdfParam<double>     (_sdf, "bladeRadius",blade_radius_,blade_radius_);
+  /* -------- 水下旋翼效率(动态)参数 -------- */
+  getSdfParam<double>(_sdf, "uwKt0",      uw_kt0_,       uw_kt0_);
+  getSdfParam<double>(_sdf, "uwKq0",      uw_kq0_,       uw_kq0_);
+  getSdfParam<double>(_sdf, "uwKtSlope",  uw_kt_slope_,  uw_kt_slope_);
+  getSdfParam<double>(_sdf, "uwKqSlope",  uw_kq_slope_,  uw_kq_slope_);
+  getSdfParam<double>(_sdf, "uwEffFloor", uw_eff_floor_, uw_eff_floor_);
+  getSdfParam<double>(_sdf, "uwJMax",     uw_J_max_,     uw_J_max_);
   /* -------- 近水动画 SDF 参数 -------- */
 getSdfParam<bool>   (_sdf, "waterAnim",        water_anim_enabled_, water_anim_enabled_);
 getSdfParam<double> (_sdf, "splashThreshold",  dR_splash_threshold_, dR_splash_threshold_);
@@ -540,7 +553,10 @@ void GazeboMotorModel::UpdateForcesAndMoments() {
  if (underwater) {
    d_over_R = 1.0;                           // 占位，无实际意义
  } else {
-   d_over_R = std::clamp(z / blade_radius_, 0.0, 1.0);
+   // h/R 高度归一化：NSE 模型在 h_over_R∈[0,~4] 上拟合，phys3 随高度
+   // 自然衰减到 1.0。不要把上界 clamp 到 1.0——那会把增益冻结在 h=1.0
+   // 处的值（低转速时≈1.22），导致飞高后 kt 仍≈1.2 而非 1.0。
+   d_over_R = std::max(z / blade_radius_, 0.0);
  }
 /* === 近水动画：海面才触发 === */
 if (water_anim_enabled_ && over_sea_) {
@@ -567,11 +583,24 @@ kq_gain_ = srGain(kq_sr_, d_over_R, rpm_ratio, blade_radius_);
   kq_gain_ = std::clamp(bilerp(d_ratio_grid_, rpm_ratio_grid_,
                                kq_gain_table_, d_over_R, rpm_ratio), 0.9, 1.4);
 }
- // -------- 水下直接关闭近水修正 --------
+ // -------- 水下: 用进速比 J 动态降额 (替代固定 0.7) --------
   if (underwater) {
-    // 现修改为 0.3
-    kt_gain_ = 0.7; 
-    kq_gain_ = 0.7;
+    // 空气中标定的 motor_constant_ 在水中会过量出力, 故先用零进速(bollard)
+    // 系数降额; 再按桨叶进速比 J = Va/(n·D) 调制, 复现真实螺旋桨 KT(J)/KQ(J)
+    // 随轴向来流增大而下降的特性 —— 即效率不是常数, 而随工况动态变化.
+    const double D     = 2.0 * blade_radius_;                          // 桨直径
+    const double n_rps = std::abs(real_motor_velocity) / (2.0 * M_PI); // 转/秒
+    // 沿推力轴(关节轴)的轴向来流速度
+    const double v_axial =
+        (link_->WorldLinearVel() - wind_speed_W_).Dot(joint_->GlobalAxis(0));
+    // 进速比: 低转速时推力本就 ∝ n² → 0, 用阈值避免奇异; 仅正进速降额, 负进速
+    // (下潜中桨上推) 保守地保持 bollard 值, 规避涡环态等不稳定区.
+    const double J = (n_rps > 1e-3)
+        ? std::clamp(v_axial / (n_rps * D), 0.0, uw_J_max_)
+        : 0.0;
+
+    kt_gain_ = std::clamp(uw_kt0_ * (1.0 - uw_kt_slope_ * J), uw_eff_floor_, uw_kt0_);
+    kq_gain_ = std::clamp(uw_kq0_ * (1.0 - uw_kq_slope_ * J), uw_eff_floor_, uw_kq0_);
   }
 // ---------- 推力 / 扭矩 ----------
 double thrust = turning_direction_ * real_motor_velocity_sign *

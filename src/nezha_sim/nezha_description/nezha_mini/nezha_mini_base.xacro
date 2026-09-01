@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 
 <robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
 <xacro:property name="namespace" value="$(arg namespace)" />

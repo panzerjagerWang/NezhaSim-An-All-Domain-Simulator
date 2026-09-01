@@ -1,4 +1,9 @@
-
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #include "nasv_physics.hh"
 #include "asv_wave_sim_gazebo_plugins/Algorithm.hh"
 #include "asv_wave_sim_gazebo_plugins/Convert.hh"
@@ -462,7 +467,7 @@ void HydrodynamicsParameters::SetFromSDF(sdf::Element& _sdf)
 
   }
 
-// ✅ 在这里添加新函数
+// ✅ 
 double HydrodynamicsParameters::BuoyancyScale() const
 {
   return this->data->buoyancyScale;
@@ -636,6 +641,12 @@ void HydrodynamicsParameters::SetMaxDisplacedVolume(double _volume)
 
     public: double submergedArea;
 
+    // Full watertight hull volume (divergence theorem over the whole mesh),
+    // computed once and cached. Rigid motion does not change it. -1 = not yet
+    // computed. Used to scale mesh buoyancy down to the configured real
+    // displaced volume proportionally to submersion.
+    public: double fullHullVolume{-1.0};
+
     public: std::vector<Vector3> fBuoyancy;
     public: std::vector<Point3>  cBuoyancy;
   
@@ -765,7 +776,7 @@ void Hydrodynamics::PopulateSubmergedTriangle(
   TriangleProperties& _triProps)
 {
 
-const double MIN_AREA = 1.0e-6;  // 从 5.0e-6 改为 1.0e-6
+const double MIN_AREA = 1.0e-6;  //  5.0e-6  1.0e-6
 
 
   if (_triProps.area < MIN_AREA)
@@ -782,7 +793,7 @@ const double MIN_AREA = 1.0e-6;  // 从 5.0e-6 改为 1.0e-6
   double maxEdge = std::max({edge01, edge12, edge20});
   double minEdge = std::min({edge01, edge12, edge20});
   
-const double MAX_ASPECT_RATIO = 100.0;  // 从 50.0 改为 100.0
+const double MAX_ASPECT_RATIO = 100.0;  //  50.0  100.0
 
 
   if (minEdge > 1.0e-10)  
@@ -1158,72 +1169,107 @@ void Hydrodynamics::ComputeBuoyancyForce()
   this->data->fBuoyancy.clear();
   this->data->cBuoyancy.clear();
 
-  // ✅ 第一步：计算原始浮力和估算排水体积
+  // ✅ Step 1: raw per-triangle buoyancy + accurate submerged displaced volume.
   double buoyancyScale = this->data->params->BuoyancyScale();
-  double estimatedVolume = 0.0;  // 累计估算排水体积
-  
-  std::vector<Vector3> rawForces;      // 存储原始浮力
-  std::vector<Point3>  rawCenters;     // 存储作用点
-  
+  double estimatedVolume = 0.0;  // true submerged displaced volume of the mesh
+
+  std::vector<Vector3> rawForces;      // per-triangle buoyancy
+  std::vector<Point3>  rawCenters;     // application points
+
   auto& position = this->data->position;
   auto& wavefieldSampler = *this->data->wavefieldSampler;
-  
+
+  // --------------------------------------------------------------------------
+  // ACCURATE DISPLACED VOLUME (divergence theorem).
+  //
+  // The old estimate summed area*avgDepth over EVERY submerged face. That is
+  // not a volume: it ignores face orientation, so top and bottom faces both
+  // add positively and it overcounts several-fold (and grew with depth, which
+  // forced the per-vertex depth clamp hack). The displaced volume is the
+  // surface integral, via the divergence theorem with F = (0,0, z - z_surf):
+  //
+  //     V = ∮ F·n dA = Σ_faces (z_centroid - z_surf) * n_z * Area
+  //
+  // n is the OUTWARD UNIT normal. The open waterline cap contributes 0 because
+  // (z - z_surf)=0 there, so summing over the clipped hull faces alone is
+  // exact. (z_centroid - z_surf) = -depth(centroid). The result is invariant to
+  // how deep the body sinks (Σ n_z·A = 0 for a closed hull), so no clamp is
+  // needed and it equals the true submerged volume.
+  // --------------------------------------------------------------------------
+  double signedVolume = 0.0;
+
   for (auto&& subTri : this->data->submergedTriangles)
   {
     Point3 center = CGAL::ORIGIN;
     Vector3 force = CGAL::NULL_VECTOR;
     Physics::BuoyancyForceAtCenterOfPressure(
       wavefieldSampler, subTri, center, force);
-    
-    // 应用浮力缩放系数
+
+    // 
     force = force * buoyancyScale;
-    
+
     rawForces.push_back(force);
     rawCenters.push_back(center);
-    
-    // ✅ 估算该三角形贡献的排水体积
-    // 方法：面积 × 三个顶点平均水下深度
-    double area = Geometry::TriangleArea(subTri);
-    double avgDepth = 0.0;
-    for (int i = 0; i < 3; ++i)
+
+    Vector3 nrm    = Geometry::Normal(subTri);          // outward unit normal
+    double  area   = Geometry::TriangleArea(subTri);
+    Point3  cen    = Geometry::TriangleCentroid(subTri);
+    double  depthC = wavefieldSampler.ComputeDepth(cen);  // z_surf - z_centroid
+    signedVolume  += (-depthC) * nrm.z() * area;          // (z_cen - z_surf)*n_z*A
+  }
+  estimatedVolume = std::abs(signedVolume);
+
+  // --------------------------------------------------------------------------
+  // Full hull volume (same divergence theorem over the WHOLE mesh, F=(0,0,z)),
+  // computed once. Used to map the mesh's (over-large, e.g. bounding-box)
+  // displacement onto the configured real displaced volume.
+  // --------------------------------------------------------------------------
+  if (this->data->fullHullVolume < 0.0)
+  {
+    double vFull = 0.0;
+    auto& linkMesh = *this->data->linkMesh;
+    for (auto&& face : linkMesh.faces())
     {
-      double depth = wavefieldSampler.ComputeDepth(subTri[i]);
-      avgDepth += std::max(0.0, depth);  // 只计算水下部分
+      Triangle tri = Geometry::MakeTriangle(linkMesh, face);
+      Vector3  n   = Geometry::Normal(tri);
+      double   a   = Geometry::TriangleArea(tri);
+      Point3   c   = Geometry::TriangleCentroid(tri);
+      vFull += c.z() * n.z() * a;
     }
-    avgDepth /= 3.0;
-    
-    double volumeContribution = area * avgDepth;
-    estimatedVolume += volumeContribution;
+    this->data->fullHullVolume = std::abs(vFull);
   }
 
-  // ✅ 第二步：根据体积限制计算缩放系数
+  // ✅ Step 2: proportional scale to the configured real displaced volume.
+  //
+  // The collision mesh (e.g. a bounding box) usually displaces far more than
+  // the real watertight hull. Instead of HARD-CAPPING buoyancy at maxVolume
+  // (which made it all-or-nothing: full neutral buoyancy after only a few %
+  // submersion, so the body corked on top of the water), scale every face by
+  // the constant maxVolume / fullHullVolume. Since the raw buoyancy already
+  // equals rho*g*V_submerged, this yields
+  //     net buoyancy = rho*g * maxVolume * (V_submerged / V_fullHull),
+  // i.e. buoyancy proportional to submerged fraction of the REAL volume —
+  // smooth, physical, and never exceeding the real displacement.
   double volumeScale = 1.0;
   double maxVolume = this->data->params->MaxDisplacedVolume();
-  
-  if (maxVolume > 0.0 && estimatedVolume > 0.0)
+
+  if (maxVolume > 0.0 && this->data->fullHullVolume > 1.0e-9)
   {
-    if (estimatedVolume > maxVolume)
+    volumeScale = maxVolume / this->data->fullHullVolume;
+    if (volumeScale > 1.0) volumeScale = 1.0;   // never amplify buoyancy
+
+    // One-time note so the constant scale is visible without per-frame spam.
+    static bool scaleNoted = false;
+    if (!scaleNoted)
     {
-      volumeScale = maxVolume / estimatedVolume;
-      
-      // 输出警告信息（每100帧输出一次）
-      static int warnCounter = 0;
-      if ((warnCounter++ % 100) == 0)
-      {
-        gzwarn << "╔════════════════════════════════════════╗" << std::endl;
-        gzwarn << "║  Volume Limit Exceeded!               ║" << std::endl;
-        gzwarn << "╠════════════════════════════════════════╣" << std::endl;
-        gzwarn << "║  Estimated: " << std::setw(10) << std::fixed 
-               << std::setprecision(4) << estimatedVolume << " m³        ║" << std::endl;
-        gzwarn << "║  Limit:     " << std::setw(10) << maxVolume << " m³        ║" << std::endl;
-        gzwarn << "║  Scale:     " << std::setw(10) << std::setprecision(3) 
-               << volumeScale << "              ║" << std::endl;
-        gzwarn << "╚════════════════════════════════════════╝" << std::endl;
-      }
+      scaleNoted = true;
+      gzmsg << "[Hydrodynamics] Buoyancy volume scale = " << std::setprecision(4)
+            << volumeScale << "  (real " << maxVolume << " m^3 / hull "
+            << this->data->fullHullVolume << " m^3)" << std::endl;
     }
   }
 
-  // ✅ 第三步：应用体积缩放并累加力和力矩
+  // ✅ 
   for (size_t i = 0; i < rawForces.size(); ++i)
   {
     Vector3 force = rawForces[i] * volumeScale;
@@ -1241,15 +1287,16 @@ void Hydrodynamics::ComputeBuoyancyForce()
   this->data->force  += sumForce;
   this->data->torque += sumTorque;
   
-  // ✅ 调试输出（每50帧一次）
+  // ✅ 50
   static int debugCounter = 0;
   if ((debugCounter++ % 50) == 0)
   {
     gzmsg << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << std::endl;
     gzmsg << "🌊 Buoyancy Computation Summary [Frame " << debugCounter << "]" << std::endl;
     gzmsg << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" << std::endl;
-    gzmsg << "Estimated Volume:  " << std::fixed << std::setprecision(4) 
-          << estimatedVolume << " m³" << std::endl;
+    gzmsg << "Submerged Volume:  " << std::fixed << std::setprecision(4)
+          << estimatedVolume << " m³ (mesh)" << std::endl;
+    gzmsg << "Displaced (real):  " << estimatedVolume * volumeScale << " m³" << std::endl;
     gzmsg << "Max Volume:        " << maxVolume << " m³" << std::endl;
     gzmsg << "Volume Scale:      " << std::setprecision(3) << volumeScale << std::endl;
     gzmsg << "Buoyancy Scale:    " << buoyancyScale << std::endl;
@@ -1391,25 +1438,24 @@ Vector3 Hydrodynamics::GetBuoyancyTorque() const
 }
 Vector3 Hydrodynamics::GetWaveDragForce() const
 {
-  // 计算除浮力外的所有力
+  // 
   Vector3 totalDrag = this->data->force - this->GetBuoyancyForce();
   return totalDrag;
 }
 
-// ✅ 新增：获取网格浮力
+// ✅ 
 Vector3 Hydrodynamics::GetMeshBuoyancyForce() const
 {
-  return this->GetBuoyancyForce();  // 复用现有方法
+  return this->GetBuoyancyForce();  // 
 }
 
-// ✅ 新增：获取波浪拖拽力矩
+// ✅ 
 Vector3 Hydrodynamics::GetWaveDragTorque() const
 {
-  // 计算除浮力力矩外的所有力矩
+  // 
   Vector3 totalDragTorque = this->data->torque - this->GetBuoyancyTorque();
   return totalDragTorque;
 }
 
 
-} 
-
+}

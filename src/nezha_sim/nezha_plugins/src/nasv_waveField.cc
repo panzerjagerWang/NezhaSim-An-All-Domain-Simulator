@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 
 #include "nasv_waveField.hh"
@@ -841,7 +847,23 @@ void WavefieldSampler::UpdatePatch()
       vertexIndex++;
       continue;
     }
-    
+
+    // Guard against out-of-range cell indices. FindIntersectionIndex can
+    // return ix==nx / iy==ny for points on the patch's upper edge (its bounds
+    // check rejects only _x > upperX, so _x == upperX slips through), and a
+    // zero cell count yields a garbage index. Either makes the downstream face
+    // lookup read out of bounds and segfault the simulator.
+    {
+      const auto cellCount = wavefieldGrid.GetCellCount();
+      if (cellCount[0] == 0 || cellCount[1] == 0)
+      {
+        vertexIndex++;
+        continue;
+      }
+      if (cellIndex[0] >= cellCount[0]) cellIndex[0] = cellCount[0] - 1;
+      if (cellIndex[1] >= cellCount[1]) cellIndex[1] = cellCount[1] - 1;
+    }
+
     isFound = GridTools::FindIntersectionGrid(
       wavefieldGrid, origin, direction, cellIndex, point);
       
@@ -969,7 +991,19 @@ double WavefieldSampler::ComputeDepth(
     }
     return 0.0;
   }
-  
+
+  // Guard against out-of-range cell indices before the face lookup below.
+  // FindIntersectionIndex can return ix==nx / iy==ny on the patch's upper edge
+  // (its bounds check rejects only _x > upperX), and a zero cell count yields a
+  // garbage index; either reads out of bounds in GetFace and segfaults.
+  {
+    const auto cellCount = _patch.GetCellCount();
+    if (cellCount[0] == 0 || cellCount[1] == 0)
+      return 0.0;
+    if (index[0] >= cellCount[0]) index[0] = cellCount[0] - 1;
+    if (index[1] >= cellCount[1]) index[1] = cellCount[1] - 1;
+  }
+
   isFound = GridTools::FindIntersectionGrid(
     _patch, _point, direction, index, wavePoint);
     

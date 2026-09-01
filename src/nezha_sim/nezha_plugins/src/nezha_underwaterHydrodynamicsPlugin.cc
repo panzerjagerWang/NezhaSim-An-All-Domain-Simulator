@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 #include "nezha_underwaterHydrodynamicsPlugin.hh"
 #include <gazebo/gazebo.hh>
@@ -5,8 +11,9 @@
 #include <gazebo/physics/PhysicsEngine.hh>
 #include <set> 
 #include <mutex>
-namespace gazebo
+namespace nezha
 {
+    using namespace gazebo; // <--- ADD THIS LINE
     static std::set<std::string> g_registered_services;
     static std::mutex g_service_mutex;
  void HydrodynamicModelRegistry::Register(HydrodynamicModel* model)
@@ -42,20 +49,12 @@ namespace gazebo
     {
         GZ_ASSERT(_link != NULL, "Invalid link pointer");
 
-        // ==========================================================================
-        // [修复 1] 恢复丢失的初始化代码 (防止变量未初始化导致物理引擎崩溃)
-        // ==========================================================================
-        this->filteredAcc.setZero();
-        this->lastVelRel.setZero();
-        this->lastTime = 0.0;
-        
-        // 如果有 volume 参数，通常在这里读取，这里先设为默认防止未定义行为
-        // 具体取决于您的头文件定义，但初始化为0是安全的起点
-        
-        // ==========================================================================
-        // [修复 2] 确保 ROS 已初始化 (防止创建 NodeHandle 时崩溃)
-        // ==========================================================================
-        if (!ros::isInitialized())
+this->filteredAcc.setZero();
+this->lastVelRel.setZero();
+this->lastTime = 0.0;
+this->fluidDensity = 1028.0; // Default sea water density
+
+if (!ros::isInitialized())
         {
             int argc = 0;
             char **argv = NULL;
@@ -65,20 +64,11 @@ namespace gazebo
 
         this->rosNode = new ros::NodeHandle("~");
 
-        // ==========================================================================
-        // [修复 3] 避免服务名称冲突 (保留您之前的修复)
-        // ==========================================================================
         std::string linkName = this->link->GetName();
         std::string modelName = this->link->GetModel()->GetName();
         
-        // 为每个 Link 使用唯一的服务名称
         std::string serviceName = "/" + modelName + "/" + linkName + "/get_hydrodynamics_forces";
         
-        // [已注释] 防止与 nezha_surfacePlugin 冲突
-        // if (linkName.find("base_link") != std::string::npos) {
-        //      serviceName = "/" + modelName + "/get_hydrodynamics_forces";
-        // }
-
         bool should_register = false;
         {
             std::lock_guard<std::mutex> lock(g_service_mutex);
@@ -100,7 +90,7 @@ namespace gazebo
             
             this->forcesService = this->rosNode->advertiseService(aso);
             
-            // 启动线程
+            // 
             this->rosQueueThread = std::thread(
                 std::bind(&HydrodynamicModel::QueueThread, this)
             );
@@ -112,35 +102,35 @@ namespace gazebo
              gzmsg << "- [Info] Service " << serviceName << " already handled." << std::endl;
         }
         
-        // 注册到单例注册表
+        // 
         HydrodynamicModelRegistry::GetInstance().Register(this);
     }
 
 
-    // --- [NEW] Proper Destructor ---
-    HydrodynamicModel::~HydrodynamicModel()
-    {
-        // 1. Unregister from Singleton first
-        HydrodynamicModelRegistry::GetInstance().Unregister(this);
+HydrodynamicModel::~HydrodynamicModel()
+{
+    // Unregister first
+    HydrodynamicModelRegistry::GetInstance().Unregister(this);
 
-        // 2. Stop and Join the ROS Thread to prevent memory corruption
-        if (this->rosNode) {
-            this->rosNode->shutdown();
-        }
-        
-        this->rosQueue.clear();
-        this->rosQueue.disable();
-        
-        if (this->rosQueueThread.joinable()) {
-            this->rosQueueThread.join();
-        }
-        
-        // 3. Clean up pointers
-        if (this->rosNode) {
-            delete this->rosNode;
-            this->rosNode = nullptr;
-        }
+    // CRITICAL: Shutdown node to break any pending service calls
+    if (this->rosNode) {
+        this->rosNode->shutdown();
     }
+    
+    // Disable queue
+    this->rosQueue.clear();
+    this->rosQueue.disable();
+    
+    if (this->rosQueueThread.joinable()) {
+        this->rosQueueThread.join();
+    }
+    
+    // Cleanup
+    if (this->rosNode) {
+        delete this->rosNode;
+        this->rosNode = nullptr;
+    }
+}
 
 void HydrodynamicModel::ComputeAcc(Eigen::Vector6d _velRel, double _time,
                                   double _alpha)
@@ -214,8 +204,8 @@ void HydrodynamicModel::ComputeFullForces(
     outReport.coriolisForce = ignition::math::Vector3d::Zero;
     outReport.coriolisTorque = ignition::math::Vector3d::Zero;
 
-    // ================= 修正后的代码 =================
-    // 1. 先获取当前姿态
+    // =================  =================
+    // 1. 
     ignition::math::Pose3d pose;
 #if GAZEBO_MAJOR_VERSION >= 8
     pose = this->link->WorldPose();
@@ -223,14 +213,14 @@ void HydrodynamicModel::ComputeFullForces(
     pose = this->link->GetWorldPose();
 #endif
 
-    // 2. 定义变量来接收计算结果
+    // 2. 
     ignition::math::Vector3d buoyancyForce = ignition::math::Vector3d::Zero;
     ignition::math::Vector3d buoyancyTorque = ignition::math::Vector3d::Zero;
 
-    // 3. 调用父类函数 (传入 Pose, 输出 Force 和 Torque)
+    // 3.  ( Pose,  Force  Torque)
     this->GetBuoyancyForce(pose, buoyancyForce, buoyancyTorque);
 
-    // 4. 将世界坐标系的浮力转换到机体坐标系 (Body Frame)
+    // 4.  (Body Frame)
     outReport.buoyancyForce = pose.Rot().RotateVectorReverse(buoyancyForce);
     // ==============================================
 
@@ -405,7 +395,7 @@ HMFossen::HMFossen(sdf::ElementPtr _sdf,
 if (modelParams->HasElement("volume")) {
     this->volume = modelParams->Get<double>("volume");
 } else {
-    // 如果没有设置，默认为 0，并打印警告
+    //  0
     this->volume = 0.0;
 }
   this->params.push_back("scaling_volume");
@@ -549,10 +539,10 @@ for (int i = 0; i < 6; i++)
 {
     auto models = HydrodynamicModelRegistry::GetInstance().GetModels();
     
-    gzmsg << "✓ HMFossen 构造完成（基类已注册）" << std::endl;
-    gzmsg << "  当前注册表大小: " << models.size() << std::endl;
+    gzmsg << "✓ HMFossen " << std::endl;
+    gzmsg << "  : " << models.size() << std::endl;
 
-    gzmsg << "  注册表内容:" << std::endl;
+    gzmsg << "  :" << std::endl;
     for (size_t i = 0; i < models.size(); ++i) {
         auto* model = models[i];
         if (model && model->GetLink()) {
@@ -560,7 +550,7 @@ for (int i = 0; i < 6; i++)
                   << model->GetLink()->GetScopedName() 
                   << " @ " << model << std::endl;
         } else {
-            gzmsg << "    [" << i << "] NULL 或无效指针" << std::endl;
+            gzmsg << "    [" << i << "] NULL " << std::endl;
         }
     }
 }
@@ -580,7 +570,7 @@ void HydrodynamicModel::ResetStateForBelow()
 void HMFossen::ApplyHydrodynamicForces(
     double time, const ignition::math::Vector3d &_flowVelWorld)
 {
-    // 可选: 保留禁用检查
+    // : 
     if (!enabled_) {
         return;
     }
@@ -588,7 +578,7 @@ void HMFossen::ApplyHydrodynamicForces(
     HydrodynamicModel::ForceReport rep =
         this->UpdateForces(time, _flowVelWorld);
 
-    // 可选: 保留力限幅 (原版没有,但可以保留作为安全措施)
+    // :  (,)
     if (this->maxForce_ > 0.0)
     {
         double nF = rep.totalForce.Length();
@@ -602,13 +592,13 @@ void HMFossen::ApplyHydrodynamicForces(
             rep.totalTorque = rep.totalTorque * (this->maxTorque_ / nT);
     }
 
-    // Forces and torques are wrt link frame (已在 ComputeFullForces 中转换)
+    // Forces and torques are wrt link frame ( ComputeFullForces )
     this->link->AddRelativeForce(rep.totalForce);
     this->link->AddRelativeTorque(rep.totalTorque);
 
     this->ApplyBuoyancyForce();
 
-    // 可选: 存储调试信息
+    // : 
     if (this->debugFlag)
     {
         this->StoreVector(UUV_DAMPING_FORCE, rep.dampingForce);
@@ -1172,7 +1162,7 @@ void HMFossen::ComputeFullForces(
     const ignition::math::Vector3d &_flowVelWorld,
     HydrodynamicModel::ForceReport& outReport)
 {
-    // 初始化报告
+    // 
     outReport.totalForce = ignition::math::Vector3d::Zero;
     outReport.totalTorque = ignition::math::Vector3d::Zero;
     outReport.dampingForce = ignition::math::Vector3d::Zero;
@@ -1217,7 +1207,7 @@ void HMFossen::ComputeFullForces(
         this->ToNED(linVel - flowVel),
         this->ToNED(angVel));
 
-    // ✅ 声明局部变量 Ca 和 D
+    // ✅  Ca  D
     Eigen::Matrix6d Ca, D;
 
     // Update added Coriolis matrix
@@ -1254,11 +1244,11 @@ void HMFossen::ComputeFullForces(
         ignition::math::Vector3d hydTorque =
             this->FromNED(Vec3dToGazebo(tau.tail<3>()));
 
-        // 填充报告
+        // 
         outReport.totalForce = hydForce;
         outReport.totalTorque = hydTorque;
 
-        // 分项力 (转换回 Gazebo 坐标系)
+        //  ( Gazebo )
         outReport.dampingForce = this->FromNED(Vec3dToGazebo(damping.head<3>()));
         outReport.dampingTorque = this->FromNED(Vec3dToGazebo(damping.tail<3>()));
 
@@ -1271,7 +1261,7 @@ void HMFossen::ComputeFullForces(
     double volume = this->GetVolume();
     double density = this->fluidDensity;
     
-    // 获取重力(世界坐标系)
+    // ()
 #if GAZEBO_MAJOR_VERSION >= 8
     ignition::math::Vector3d gravity = this->link->GetWorld()->Gravity();
 #else
@@ -1279,23 +1269,23 @@ void HMFossen::ComputeFullForces(
         this->link->GetWorld()->GetPhysicsEngine()->GetGravity().Ign();
 #endif
 
-    // 浮力 = -ρVg (世界坐标系,向上)
+    //  = -ρVg (,)
     ignition::math::Vector3d buoyancyWorld = -density * volume * gravity;
     
-    // 转换到 body 坐标系
+    //  body 
     ignition::math::Vector3d buoyancyBody = 
         pose.Rot().RotateVectorReverse(buoyancyWorld);
     
     outReport.buoyancyForce = buoyancyBody;
 
     outReport.stamp = time;
-    outReport.inBodyFrame = false; // 已转换回 Gazebo 坐标系
-        // ========== ✅ 保存力数据 (在函数末尾添加) ==========
+    outReport.inBodyFrame = false; //  Gazebo 
+        // ========== ✅  () ==========
     this->lastDampingForce = outReport.dampingForce;
     this->lastAddedMassForce = outReport.addedMassForce;
     this->lastCoriolisForce = outReport.coriolisForce;
     this->lastBuoyancyForce = outReport.buoyancyForce;
-    this->lastSubmersionRatio = 1.0;  // 水下默认完全浸没
+    this->lastSubmersionRatio = 1.0;  // 
 }
 
 
@@ -1404,40 +1394,40 @@ bool HydrodynamicModel::OnGetForcesService(
     nezha_plugins::HydrodynamicsForces::Request &req,
     nezha_plugins::HydrodynamicsForces::Response &res)
 {
-    // 1. 获取最新的受力报告
+    // 1. 
     const ForceReport& report = this->lastForceReport;
 
-    // 2. 填充浮力 (Buoyancy)
+    // 2.  (Buoyancy)
     res.buoyancy_x = report.buoyancyForce.X();
     res.buoyancy_y = report.buoyancyForce.Y();
     res.buoyancy_z = report.buoyancyForce.Z();
 
-    // 3. 填充阻尼力 (Damping)
+    // 3.  (Damping)
     res.damping_x = report.dampingForce.X();
     res.damping_y = report.dampingForce.Y();
     res.damping_z = report.dampingForce.Z();
 
-    // 4. 填充附加质量力 (Added Mass)
+    // 4.  (Added Mass)
     res.added_mass_x = report.addedMassForce.X();
     res.added_mass_y = report.addedMassForce.Y();
     res.added_mass_z = report.addedMassForce.Z();
 
-    // 5. 填充科氏力 (Coriolis)
+    // 5.  (Coriolis)
     res.coriolis_x = report.coriolisForce.X();
     res.coriolis_y = report.coriolisForce.Y();
     res.coriolis_z = report.coriolisForce.Z();
 
-    // 6. 填充波浪力 (Wave)
-    // 注意：这是水下动力学插件(Underwater Plugin)，通常只计算 Fossen 模型(阻尼/附加质量)。
-    // 波浪力通常由 Surface Plugin 计算。在这里我们设为 0，或者你可以设为 totalForce。
+    // 6.  (Wave)
+    // (Underwater Plugin) Fossen (/)
+    //  Surface Plugin  0 totalForce
     res.wave_x = 0.0; 
     res.wave_y = 0.0;
     res.wave_z = 0.0;
 
-    // 7. 填充浸没比例 (直接访问类成员变量)
+    // 7.  ()
     res.submersion_ratio = this->lastSubmersionRatio;
 
-    // 8. 填充时间戳
+    // 8. 
     res.sim_time = report.stamp;
 
     return true;

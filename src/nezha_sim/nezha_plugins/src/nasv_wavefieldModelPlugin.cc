@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 #include "nasv_wavefieldModelPlugin.hh"
 #include "asv_wave_sim_gazebo_plugins/CGALTypes.hh"
@@ -316,12 +322,12 @@ else
     }
     ignNode.Request(topicName, wavefieldMsg);
   }
-  // --- 新增代码：Service 回调函数实现 ---
+  // --- Service  ---
   bool WavefieldModelPlugin::SetWaveParamsCallback(
       nezha_plugins::SetWaveParameters::Request &req,
       nezha_plugins::SetWaveParameters::Response &res)
   {
-    // 1. 获取内部波浪参数对象的引用
+    // 1. 
     auto constWaveParams = this->data->wavefieldEntity->GetWavefield()->GetParameters();
     if (!constWaveParams)
     {
@@ -329,11 +335,11 @@ else
       res.message = "Internal Wavefield parameters are null.";
       return true;
     }
-    // 强转为非 const 以便修改
+    //  const 
     auto& waveParams = const_cast<WaveParameters&>(*constWaveParams);
 
-    // 2. 构建 Gazebo Param_V 消息 (模拟 WaveMsgPublisher 的行为)
-    // 这样做最安全，因为我们复用了 OnWaveMsg 中验证过的 SetFromMsg 逻辑
+    // 2.  Gazebo Param_V  ( WaveMsgPublisher )
+    //  OnWaveMsg  SetFromMsg 
     gazebo::msgs::Param_V msg;
 
     auto add_param = [&msg](const std::string& name, double value) {
@@ -350,7 +356,7 @@ else
         p->mutable_value()->set_int_value(value);
     };
 
-    // 填充参数
+    // 
     add_int_param("number", (int)req.number);
     add_param("amplitude", req.amplitude);
     add_param("period", req.period);
@@ -358,16 +364,16 @@ else
     add_param("angle", req.angle);
     add_param("steepness", req.steepness);
     
-    // 处理方向 (Direction 是 Vector2)
+    //  (Direction  Vector2)
     auto* p_dir = msg.add_param();
     p_dir->set_name("direction");
-    // 使用 VECTOR3D 代替，因为 Gazebo Any 消息不支持 VECTOR2D
+    //  VECTOR3D  Gazebo Any  VECTOR2D
     p_dir->mutable_value()->set_type(gazebo::msgs::Any::VECTOR3D);
     p_dir->mutable_value()->mutable_vector3d_value()->set_x(req.direction_x);
     p_dir->mutable_value()->mutable_vector3d_value()->set_y(req.direction_y);
-    p_dir->mutable_value()->mutable_vector3d_value()->set_z(0.0); // Z 轴设为 0
+    p_dir->mutable_value()->mutable_vector3d_value()->set_z(0.0); // Z  0
 
-    // 3. 应用参数
+    // 3. 
     waveParams.SetFromMsg(msg);
     if (this->data->wavePub)
     {

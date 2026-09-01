@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #include "nezha_terrainDetectorPlugin.h"
 #include <gazebo/common/common.hh>
 #include <gazebo/physics/physics.hh>
@@ -148,11 +154,17 @@ void TerrainDetectorPlugin::Load(physics::ModelPtr _model, sdf::ElementPtr _sdf)
   ground_ray_ = boost::dynamic_pointer_cast<physics::RayShape>(
       world_->Physics()->CreateShape("ray", physics::CollisionPtr()));
 
-  if (!ros::isInitialized()) {
-    int argc = 0;
-    char **argv = NULL;
-    ros::init(argc, argv, "terrain_detector_plugin", ros::init_options::NoSigintHandler);
-  }
+{
+    static std::mutex rosInitMutex; // Static ensures it's shared across instances
+    std::lock_guard<std::mutex> lock(rosInitMutex);
+    if (!ros::isInitialized()) {
+        int argc = 0;
+        char** argv = nullptr;
+        // Note: Use a generic name or AnonymousName to avoid conflicts
+        ros::init(argc, argv, "nezha_sim_node", 
+                 ros::init_options::NoSigintHandler | ros::init_options::AnonymousName);
+    }
+}
 
   std::string node_namespace = namespace_;
   if (!node_namespace.empty() && node_namespace[0] != '/') {

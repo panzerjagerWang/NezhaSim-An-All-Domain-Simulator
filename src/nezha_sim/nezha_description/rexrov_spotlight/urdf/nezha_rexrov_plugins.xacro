@@ -3,7 +3,7 @@
 <robot name="nezha_rexrov_spolight" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
 <!-- ========================================
-     参数定义
+     Parameter definitions
      ======================================== -->
 <xacro:arg name="namespace" default="rexrov"/>
 <xacro:property name="namespace" value="$(arg namespace)"/>
@@ -81,8 +81,8 @@
       <underwater_plugin_name>${underwater_plugin_name}</underwater_plugin_name>
       
       <!-- ========================================
-           插件库文件名（用于日志和调试）
-           说明：这些参数主要用于调试输出，不影响插件查找逻辑
+           Plugin library filenames (used for logging and debugging)
+           Note: these parameters are used mainly for debug output and do not affect plugin lookup logic
            ======================================== -->
       <surface_plugin_file>${surface_plugin_file}</surface_plugin_file>
       <underwater_plugin_file>${underwater_plugin_file}</underwater_plugin_file>
@@ -123,7 +123,7 @@
       <wave_model>${wave_model}</wave_model>
 
       <!-- ========================================
-           🔧 Critical Parameters (Locked at Load)
+           Critical Parameters (Locked at Load)
            These parameters are set once during plugin initialization
            and cannot be changed at runtime
            ======================================== -->
@@ -155,10 +155,10 @@
   </gazebo>
 </xacro:macro>
 <!-- ========================================
-     ✅ 统一的插件应用宏
+     Unified plugin application macro
      ======================================== -->
 <!-- ========================================
-     ✅ 统一的插件应用宏
+     Unified plugin application macro
      ======================================== -->
 <xacro:macro name="apply_nezha_plugins" params="
   namespace
@@ -168,9 +168,9 @@
 ">
   
   <!-- ========================================
-       1️⃣ NASV Hydrodynamics Plugin (水面动力学)
-       - 被 Phase Switch 控制
-       - 负责浮力、波浪力、阻力等
+       1. NASV Hydrodynamics Plugin (surface dynamics)
+       - controlled by the Phase Switch
+       - handles buoyancy, wave forces, drag, etc.
        ======================================== -->
   <xacro:hydrodynamics_plugin 
     wave_model="${wave_model}"
@@ -194,9 +194,9 @@
     underwater_plugin_file="libnezha_underwater_plugin.so"/>
   
   <!-- ========================================
-       4️⃣ Wave Probe Plugin (波浪探测)
-       - 提供实时的水面高度和相态信息
-       - Phase Switch 通过 ROS 服务查询此插件
+       4. Wave Probe Plugin (wave sensing)
+       - provides real-time water surface height and phase information
+       - the Phase Switch queries this plugin via a ROS service
        ======================================== -->
   <xacro:wave_probe_plugin 
     plugin_name="usv_wave_probe"
@@ -207,8 +207,8 @@
     wavefield_name="${wave_model}::wavefield_entity"/>
   
   <!-- ========================================
-       5️⃣ Robot State Plugin (机器人状态发布)
-       - 发布机器人的位姿、速度等信息
+       5. Robot State Plugin (robot state publishing)
+       - publishes the robot's pose, velocity, and other state information
        ======================================== -->
   <xacro:RobotStatePlugin model_namespace="${namespace}"/>
 <xacro:terrain_detector_macro 

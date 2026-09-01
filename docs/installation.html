@@ -9,12 +9,9 @@
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
 <body>
-<!-- BASELINE-NOTICE -->
 <div class="baseline-banner">
-  <span class="pill">Baseline</span>
-  This public release is <b>NezhaSim-PSC-RS</b> — the <b>rigid medium-switching</b> baseline used for
-  comparison in the paper, provided <b>for benchmarking only</b>. The paper is still under review; the
-  full <b>NezhaSim</b> (continuous PSC blending&nbsp;+&nbsp;LEAP&nbsp;+&nbsp;MT) will be released after acceptance.
+  <span class="pill">Current source</span>
+  This guide installs the repository's ROS&nbsp;Noetic / Gazebo&nbsp;11 workspace and its pinned submodules.
 </div>
 
 
@@ -38,8 +35,8 @@
     <div class="eyebrow">Getting started</div>
     <h1>Installation</h1>
   </div>
-  <p class="lead">NezhaSim ships three ROS packages and pulls several upstream simulators via
-     <code>vcstool</code>. The whole build takes about 15&nbsp;minutes on a typical desktop.</p>
+  <p class="lead">NezhaSim ships three ROS packages, a vendored ROS Noetic compatibility tree, and
+     pinned Git submodules. Build time depends on the machine and is not estimated here.</p>
 
   <h2>Requirements</h2>
   <div class="tablewrap">
@@ -49,7 +46,7 @@
         <tr><td>OS</td><td>Ubuntu 20.04 LTS</td><td>Focal Fossa</td></tr>
         <tr><td>ROS</td><td>Noetic</td><td><code>ros-noetic-desktop-full</code></td></tr>
         <tr><td>Gazebo</td><td>11</td><td>via <code>gazebo_ros</code></td></tr>
-        <tr><td>Build tools</td><td>catkin_tools, python3-vcstool</td><td><code>catkin build</code> workflow</td></tr>
+        <tr><td>Build tools</td><td>catkin_tools, rosdep</td><td><code>catkin build</code> workflow</td></tr>
         <tr><td>GPU</td><td>optional</td><td>Only needed for high-resolution rendering; physics runs on CPU</td></tr>
       </tbody>
     </table>
@@ -64,21 +61,19 @@
 <span class="k">sudo</span> apt install ros-noetic-desktop-full
 
 <span class="c"># Build &amp; dependency tooling</span>
-<span class="k">sudo</span> apt install python3-catkin-tools python3-vcstool python3-rosdep
+<span class="k">sudo</span> apt install python3-catkin-tools python3-rosdep
 <span class="k">sudo</span> rosdep init && rosdep update</pre>
 
-  <h2>2 · Create a workspace &amp; clone</h2>
-<pre><span class="k">mkdir</span> -p ~/nezha_ws/src && <span class="k">cd</span> ~/nezha_ws/src
-<span class="k">git</span> clone &lt;your-fork-url&gt; nezha_sim</pre>
+  <h2>2 · Clone the workspace and dependencies</h2>
+<pre><span class="k">git</span> clone --recurse-submodules \
+  https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws</pre>
 
-  <h2>3 · Pull third-party dependencies</h2>
-  <p>The upstream simulators (RotorS, UUV Simulator, MAVLink, ASV-Wave, Husky) are <b>not</b> vendored
-     in the repo — they are listed in <code>nezha.repos</code> and fetched with <code>vcstool</code>.</p>
-<pre><span class="k">cd</span> ~/nezha_ws/src
-<span class="k">vcs</span> import &lt; nezha_sim/nezha.repos
-
-<span class="c"># mavlink_sitl_gazebo has a submodule:</span>
-( <span class="k">cd</span> mavlink_sitl_gazebo && git submodule update --init --recursive )</pre>
+  <h2>3 · If you already cloned without submodules</h2>
+<pre><span class="k">cd</span> ~/nezha_ws
+<span class="k">git</span> submodule update --init --recursive</pre>
+  <p>The ROS Noetic UUV compatibility tree is vendored; the other upstream repositories are pinned
+     as submodules. <code>src/nezha_sim/nezha.repos</code> records the same upstream revisions for
+     auditing and advanced workspace layouts.</p>
 
   <h2>4 · Resolve system deps &amp; build</h2>
 <pre><span class="k">cd</span> ~/nezha_ws
@@ -90,16 +85,16 @@
      <code>~/.bashrc</code> so every new shell sees the workspace.</div>
 
   <h2>5 · Verify the install</h2>
-  <p>Launch a transmedium quadrotor in a lake. Gazebo should open with the vehicle floating at the
-     surface; the topics below confirm the hydrodynamics and Mechanical-Transparency streams are live.</p>
-<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch
+  <p>Launch a transmedium quadrotor in a lake. Gazebo should open with the vehicle in the scene; the
+     service discovery commands below confirm the plugins loaded.</p>
+<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch paused:=false
 
-<span class="c"># in another sourced terminal — list the decoupled force streams (MT)</span>
-<span class="k">rostopic</span> list | grep -E 'force|wrench|buoyan'</pre>
+<span class="c"># in another sourced terminal</span>
+<span class="k">rostopic</span> list | grep -E 'nezha_mini|drag'
+<span class="k">rosservice</span> list | grep -E 'hydrodynamics|phase'</pre>
 
-  <div class="warn"><b>Build failing?</b> The most common causes are a missing <code>mavlink</code>
-     submodule (re-run step 3) or unresolved system deps (re-run <code>rosdep install</code>). Make
-     sure every dependency in <code>nezha.repos</code> was cloned into <code>src/</code>.</div>
+  <div class="warn"><b>Build failing?</b> The most common causes are an uninitialized submodule
+     (re-run step 3) or unresolved system dependencies (re-run <code>rosdep install</code>).</div>
 
   <h2>Package layout</h2>
   <div class="tablewrap">

@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 
 #ifndef _ASV_WAVE_SIM_GAZEBO_PLUGINS_PHYSICS_HH_
@@ -170,11 +176,11 @@ namespace asv
     public: void SetViscousDragOn(bool _on);
     public: void SetPressureDragOn(bool _on);
   double BuoyancyScale() const;
-  double ForceScaleFactor() const;  // ← 确认这行存在
+  double ForceScaleFactor() const;  // ← 
   
   void SetBuoyancyScale(double _scale);
   void SetForceScaleFactor(double _factor);
-// ✅ 新增：最大排水体积限制
+// ✅ 
 public: double MaxDisplacedVolume() const;
 public: void SetMaxDisplacedVolume(double _volume);
 
@@ -307,7 +313,7 @@ public: void SetMaxDisplacedVolume(double _volume);
     public: const std::vector<Line>& GetWaterline() const;
     private:
     
-    // ✅ 新增：缓存分离的力
+    // ✅ 
     mutable Vector3 waveDragForce_;
     mutable Vector3 meshBuoyancyForce_;
     mutable Vector3 waveDragTorque_;

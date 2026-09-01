@@ -13,7 +13,7 @@
     <material name="${prefix}Grey"><color rgba="0.6 0.6 0.6 1.0"/></material>
     <material name="${prefix}DarkGrey"><color rgba="0.3 0.3 0.3 1.0"/></material>
     
-    <!-- 为每个圆柱体分别定义白色发光材质 - 添加透明度，减小半径差距 -->
+    <!-- Define a separate white glowing material for each cylinder - add transparency, reduce the radius difference -->
     <material name="${prefix}BrightGlow1"><color rgba="1.0 1.0 1.0 0.7"/></material>
     <material name="${prefix}BrightGlow2"><color rgba="1.0 1.0 1.0 0.65"/></material>
     <material name="${prefix}BrightGlow3"><color rgba="1.0 1.0 1.0 0.6"/></material>
@@ -77,7 +77,7 @@
       </collision>
     </link>
 
-    <!-- 分别创建5个独立的圆柱体link - 减小半径差距，更平滑过渡 -->
+    <!-- Create 5 separate cylinder links - reduce the radius difference for a smoother transition -->
     <link name="${prefix}cylinder1_link">
       <inertial>
         <origin xyz="0 0 0" rpy="0 0 0"/>
@@ -143,21 +143,21 @@
       </visual>
     </link>
 
-    <!-- 主聚光灯link，用于碰撞检测和光源 -->
+    <!-- Main spotlight link, used for collision detection and the light source -->
     <link name="${prefix}spotlight_link">
       <inertial>
         <origin xyz="0 0 2.76" rpy="0 0 0"/>
         <mass value="1.0"/>
         <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.02"/>
       </inertial>
-      <!-- 碰撞检测：使用简化的单个圆柱体 -->
+      <!-- Collision detection: use a single simplified cylinder -->
       <collision>
         <origin xyz="0 0 2.76" rpy="0 0 0"/>
         <geometry><cylinder radius="0.35" length="5.0"/></geometry>
       </collision>
     </link>
 
-    <!-- 将所有圆柱体连接到pitch_link -->
+    <!-- Attach all cylinders to pitch_link -->
     <joint name="${prefix}pitch_to_cylinder1" type="fixed">
       <parent link="${prefix}pitch_link"/>
       <child link="${prefix}cylinder1_link"/>
@@ -194,7 +194,7 @@
       <origin xyz="0 0 0" rpy="0 0 0"/>
     </joint>
 
-    <!-- 为每个圆柱体分别设置Gazebo材质 - 使用发光材质 -->
+    <!-- Set a Gazebo material for each cylinder individually - use a glowing material -->
     <gazebo reference="${prefix}cylinder1_link">
       <material>Gazebo/WhiteGlow</material>
       <self_collide>false</self_collide>
@@ -220,7 +220,7 @@
       <self_collide>false</self_collide>
     </gazebo>
 
-    <!-- 聚光灯光源 -->
+    <!-- Spotlight light source -->
     <gazebo reference="${prefix}spotlight_link">
       <light name="${prefix}spotlight_beam${unique_id}" type="spot">
         <pose>0 0 0.35 0 0 0</pose>

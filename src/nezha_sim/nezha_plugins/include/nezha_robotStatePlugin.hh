@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 
 
 #ifndef ROBOT_STATE_PLUGIN_HH
@@ -55,22 +61,26 @@ public:
   void Load(physics::ModelPtr _parent, sdf::ElementPtr _sdf) override;
   void OnUpdate();
 
+// In nezha_robotStatePlugin.hh
 private:
-  std::string wave_model_name_;      // 新增
-  std::string wave_link_name_;       // 新增
-  // Wavefield 相关（参考 waveProbe 的实现）
+  bool is_submerged_ = true; // Track current state
+  double hysteresis_threshold_ = 0.0; // 
+
+  std::string wave_model_name_;      // 
+  std::string wave_link_name_;       // 
+  // Wavefield  waveProbe 
   gazebo::physics::ModelPtr waveModel_;
   gazebo::physics::LinkPtr waveLink_;
   bool waveBound_ = false;
   gazebo::common::Time lastPrint_;
   
-  // 相位判断相关
+  // 
   bool hasPhase_ = false;
   std::string lastPhase_;
-  double zTopOffset_ = 0.0;  // 用于相位判断的偏移量
-  double L_ = 1.0;           // 特征长度
+  double zTopOffset_ = 0.0;  // 
+  double L_ = 1.0;           // 
 
-  // 辅助方法
+  // 
   bool BindWavefieldOnce();
   double QuerySurfaceZ(double x, double y) const;
   std::string DeterminePhase(double z, double surfaceZ, double vz) const;
@@ -107,7 +117,8 @@ private:
   ros::ServiceClient added_mass_scaling_client_, damping_scaling_client_;
   ros::ServiceClient thruster_clients_[3];
   ros::ServiceClient set_current_velocity_client_;
-
+  ros::ServiceClient get_phase_client_; 
+  bool QueryWaterPhase(std::string& phase, double& surfaceZ);
   std::vector<LinkHydroData> links_;
 
   double default_fluid_density_, default_volume_scaling_;

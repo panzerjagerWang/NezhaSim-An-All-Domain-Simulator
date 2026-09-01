@@ -1,76 +1,85 @@
 <div align="center">
-  <img src="docs/assets/img/logo.gif" width="220" alt="NezhaSim"/>
+  <img src="src/nezha_sim/nezha_gazebo/mesh/logo.gif" width="220" alt="NezhaSim"/>
 
-  # NezhaSim — An All-Domain Simulator
+  # NezhaSim
 
-  **Bridging Air, Land &amp; Ocean Through ROS**
+  **One ROS/Gazebo workspace for air, surface, underwater, and ground robotics**
 
-  Gazebo / ROS simulation for the **Nezha** family of *transmedium* robots —
-  vehicles that operate across air, water surface, underwater, and ground in one
-  continuous physics world.
+  NezhaSim combines RotorS, UUV Simulator, ASV-Wave, and Husky with Nezha's
+  cross-medium dynamics, wave interaction, force telemetry, and PX4 HITL tools.
 
-  ### 📖 [**Read the tutorials &amp; documentation site →**](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/)
+  [Installation](#installation) · [Tutorials](src/nezha_sim/docs/tutorials/) ·
+  [Source guide](src/nezha_sim/README.md) · [Documentation site](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/)
 </div>
-
-
-
-> ⚠️ **Baseline release — NezhaSim-PSC-RS (rigid switching).**
-> The code in this repository is **NezhaSim-PSC-RS**, the *rigid medium-switching* baseline
-> the paper uses for comparison, and is intended **only as a baseline / benchmark**. The
-> continuous-transition behaviour described in the docs (PSC blending + LEAP + MT) is the
-> **full NezhaSim**, still under development. The paper is currently under consideration; the
-> final NezhaSim will be released once it is accepted.
 
 ---
 
-## What is NezhaSim?
+## Meet NezhaSim2
 
-Most robotics simulators target a single operating domain. NezhaSim couples four
-established single-domain simulators — **ASV-Wave** (surface), the **UUV Simulator**
-(underwater), **RotorS** (air) and **Husky** (ground) — into a unified engine and
-keeps force and data streams *continuous* as a vehicle crosses every medium
-boundary. Three components make this work:
+**NezhaSim2 is the next-generation simulator for vehicles that cross the
+air–water interface.** A shared deterministic C++ physics core drives headless,
+ROS 2/Gazebo Harmonic, MuJoCo, and NVIDIA Isaac Sim backends, with decomposed
+forces, PX4 integration, mission tooling, and underwater perception workflows.
 
-- **Phase Switch Console (PSC)** — evaluates the surface and underwater force
-  models every step and blends them with a continuous submergence weight, so the
-  air ⇄ water transition is smooth (no force spike at the waterline).
-- **LEAP** — distills CFD and field data for the Near-Surface Effect and
-  Transmedium Resistance into closed-form, constant-time `O(1)` surrogates
-  (~0.09 ms vs. 135 ms for RBF), fast enough for real-time control.
-- **Mechanical Transparency (MT)** — exposes every decoupled wrench component
-  (buoyancy, drag, slamming, rotor thrust) as an inspectable ROS stream.
+<p align="center">
+  <img src="src/nezha_sim/docs/assets/nezhasim2-mini.gif" width="285" alt="NezhaSim2 transmedium simulation and force visualization"/>
+  &nbsp;
+  <img src="src/nezha_sim/docs/assets/nezhasim2-reconstruction.gif" width="500" alt="NezhaSim2 underwater mission reconstruction"/>
+</p>
 
-## Documentation &amp; tutorials
+<p align="center"><i>From cross-medium dynamics to inspection and reconstruction—one physics contract, multiple simulation backends.</i></p>
 
-The full guide lives in [`docs/`](docs/) and is published as a website:
+> NezhaSim2 is under active development. This repository remains the ROS 1 /
+> Gazebo 11 NezhaSim workspace.
 
-| Page | |
+## What's included
+
+| Package | Purpose |
 |---|---|
-| [Home](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/) | Overview, core innovations, comparison table |
-| [Installation](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/installation.html) | Build from source (Ubuntu 20.04 + ROS Noetic + Gazebo 11) |
-| [Tutorials](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/tutorials.html) | Water take-off, triple-domain Husky mission, underwater control, reading MT force streams, gantry force-ID |
-| [Architecture](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/architecture.html) | PSC, LEAP, MT, replaceable dynamics, robustness |
-| [Robots &amp; Worlds](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/robots.html) | Vehicle, world and plugin catalogue |
+| [`nezha_description`](src/nezha_sim/nezha_description/) | Nezha robot URDF/Xacro models, meshes, and sensors. |
+| [`nezha_gazebo`](src/nezha_sim/nezha_gazebo/) | Gazebo worlds, launch files, models, and experiment utilities. |
+| [`nezha_plugins`](src/nezha_sim/nezha_plugins/) | Hydrodynamics, wave, transmedia drag, motor, telemetry, terrain, and MAVLink plugins. |
 
-> The site is served from the `docs/` folder via GitHub Pages.
+Third-party simulators live under `src/nezha_sim/third_party/`. The ROS Noetic
+UUV port is vendored because it contains compatibility changes; the remaining
+upstream repositories are pinned as Git submodules. The matching revisions are
+also recorded in [`nezha.repos`](src/nezha_sim/nezha.repos).
+
+## Requirements
+
+- Ubuntu 20.04
+- ROS Noetic
+- Gazebo 11
+- `catkin_tools` and `rosdep`
+
+## Installation
+
+```bash
+# Clone the workspace and every pinned upstream dependency
+git clone --recurse-submodules \
+  https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws
+
+# Resolve dependencies and build
+cd ~/nezha_ws
+rosdep install --from-paths src --ignore-src -r -y
+catkin build
+source devel/setup.bash
+```
 
 ## Quick start
 
 ```bash
-# Transmedia quadrotor in a lake (air ⇄ water take-off / landing)
+# Start paused; press Play in Gazebo, or add paused:=false
 roslaunch nezha_gazebo nezha_mini_lake.launch
-
-# Husky multi-domain: ground + air + underwater
-roslaunch nezha_gazebo nezha_husky_UGV_UAV_UUV.launch
-
-# Open-ocean world with spectral waves
-roslaunch nezha_gazebo ocean_world.launch
 ```
 
-See the [source package README](src/nezha_sim/README.md) for the full build
-instructions, dependency list (`nezha.repos`), robot models and plugin reference.
+Then follow the checked, command-level
+[`NezhaSim tutorials`](src/nezha_sim/docs/tutorials/). The tutorial now
+distinguishes scene launchers from controllers and uses the actual topics and
+services exposed by this source tree.
 
-## License &amp; maintainer
+## License and maintainer
 
 Maintainer: **Jiaqing Wang** — `jiaqing.wang@sjtu.edu.cn` (SJTU).
-Third-party packages listed in `nezha.repos` retain their own upstream licenses.
+See [the project license](src/nezha_sim/LICENSE) and each package's
+`package.xml`. Third-party dependencies retain their upstream licenses.

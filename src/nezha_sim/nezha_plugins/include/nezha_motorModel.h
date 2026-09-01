@@ -235,6 +235,14 @@ double      blade_radius_ {0.085};
 bool   use_sr_model_{false};
 SRModel kt_sr_, kq_sr_;
 
+// ---- 水下旋翼效率(动态, 随进速比 J 变化) ----
+double uw_kt0_{0.70};       // 零进速(bollard)推力降额
+double uw_kq0_{0.70};       // 零进速(bollard)扭矩降额
+double uw_kt_slope_{0.6};   // KT 随进速比 J 的衰减斜率
+double uw_kq_slope_{0.3};   // KQ 随 J 衰减更慢
+double uw_eff_floor_{0.20}; // 效率下限, 避免推力完全塌缩
+double uw_J_max_{1.5};      // 进速比 clamp 上限
+
 // === 仍保留表格增益作兜底，可把旧名字改掉防混淆 ===
 std::vector<double> d_ratio_grid_, rpm_ratio_grid_;
 std::vector<std::vector<double>> kt_gain_table_, kq_gain_table_;

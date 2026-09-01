@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #include "nezha_phaseSwitchPlugin.hh"
 #include "nezha_surfacePlugin.hh"  
 #include <nezha_plugins/GetPhaseSample.h>  
@@ -7,14 +13,12 @@
 #include <gazebo/transport/transport.hh>
 #include <gazebo/common/Events.hh>
 
-namespace gazebo
+namespace nezha // <--- CHANGED TO NEZHA
 {
     class HydrodynamicModel;
     class HMFossen; 
-        class HydrodynamicModelRegistry;  
-
+    class HydrodynamicModelRegistry;  
 }
-
 
 namespace asv
 {
@@ -29,9 +33,19 @@ PhaseSwitchPlugin::PhaseSwitchPlugin()
 
 PhaseSwitchPlugin::~PhaseSwitchPlugin()
 {
+  // 1. Signal the loop to stop
   data->rosSpin = false;
-  if (data->rosSpinThread.joinable())
-    data->rosSpinThread.join();
+  
+  // 2. CRITICAL: Shutdown ROS interface to wake up any blocking spin() calls
+  if (data->rosNode) {
+      data->rosNode->shutdown();
+  }
+
+  // 3. Now it is safe to join
+  if (data->rosSpinThread.joinable()) {
+      data->rosSpinThread.join();
+  }
+  
   data->updateConn.reset();
 }
 
@@ -103,17 +117,22 @@ void PhaseSwitchPlugin::Load(gazebo::physics::ModelPtr _model,
     gzmsg << "[PhaseSwitchPlugin] Robot namespace: " << data->robotNamespace << std::endl;
     
 
+{
+    static std::mutex rosInitMutex; // Static ensures it's shared across instances
+    std::lock_guard<std::mutex> lock(rosInitMutex);
     if (!ros::isInitialized()) {
         int argc = 0;
         char** argv = nullptr;
-        ros::init(argc, argv, "phase_switch_plugin", 
-                 ros::init_options::NoSigintHandler);
+        // Note: Use a generic name or AnonymousName to avoid conflicts
+        ros::init(argc, argv, "nezha_sim_node", 
+                 ros::init_options::NoSigintHandler | ros::init_options::AnonymousName);
     }
+}
     
 data->rosNode = std::make_unique<ros::NodeHandle>(data->robotNamespace);
 
     
-    std::string serviceName = "transmedia/get_phase_sample";  
+std::string serviceName = "/nezha/get_phase_sample"; 
     
 data->phaseClient = data->rosNode->serviceClient<nezha_plugins::GetPhaseSample>(
     serviceName
@@ -123,9 +142,9 @@ data->phaseClient = data->rosNode->serviceClient<nezha_plugins::GetPhaseSample>(
           << data->robotNamespace << "/" << serviceName << std::endl;
 
     if (data->phaseClient.waitForExistence(ros::Duration(5.0))) {
-        gzmsg << "[PhaseSwitchPlugin] 鉁� Connected to WaveProbe service!" << std::endl;
+        gzmsg << "[PhaseSwitchPlugin]  Connected to WaveProbe service!" << std::endl;
     } else {
-        gzwarn << "[PhaseSwitchPlugin] 鈿� WaveProbe service not ready. "
+        gzwarn << "[PhaseSwitchPlugin]  WaveProbe service not ready. "
                << "Will retry during runtime." << std::endl;
     }
     
@@ -216,7 +235,8 @@ gazebo::event::Events::ConnectWorldUpdateBegin([this](const gazebo::common::Upda
         std::lock_guard<std::mutex> lock(g_nasvRegistryMutex);
 
 {
-    auto models = gazebo::HydrodynamicModelRegistry::GetInstance().GetModels();  
+    // FIXED: Changed gazebo:: to nezha::
+    auto models = nezha::HydrodynamicModelRegistry::GetInstance().GetModels();  
 }
 
         
@@ -254,9 +274,23 @@ void PhaseSwitchPlugin::OnUpdate(const gazebo::common::UpdateInfo& _info)
             lastRetry = _info.simTime;
         }
         
-        if (!data->surfacePlugin) {
-            return;
-        }
+if (!data->surfacePlugin) {
+    // Existing retry logic is good, but ensure you DO NOT proceed if null
+    if ((_info.simTime - lastRetry).Double() > 1.0) {
+        FindAndCachePlugins();
+        lastRetry = _info.simTime;
+    }
+    
+    // CRITICAL: Return immediately if still null
+    if (!data->surfacePlugin) return; 
+}
+
+// CRITICAL: Add check for underwater plugin if you use it
+// The report mentions "PhaseSwitchPlugin finds null pointers when accessing surface/underwater plugins"
+if (!data->underwaterPluginName.empty() && !data->fossenModel) {
+     // If we expect an underwater plugin but haven't found it yet, return.
+     return; 
+}
     }
 
     if (!data->surfacePlugin && (_info.simTime - lastRetry).Double() > 1.0) {
@@ -287,7 +321,7 @@ void PhaseSwitchPlugin::OnUpdate(const gazebo::common::UpdateInfo& _info)
     PhaseState detected = MapWaveProbePhase(waveProbePhase);
     
 static gazebo::common::Time lastDebugPrint;
-if ((_info.simTime - lastDebugPrint).Double() > 1.0)
+if ((_info.simTime - lastDebugPrint).Double() > 5.0)
 {
     ignition::math::Pose3d pose = data->targetLink->WorldPose();
     ignition::math::Vector3d vel = data->targetLink->WorldLinearVel();
@@ -370,11 +404,11 @@ if ((_info.simTime - lastDebugPrint).Double() > 1.0)
 
 void PhaseSwitchPlugin::HandleBelow(const gazebo::common::Time& simTime)
 {
-    // ✅ 修改后的代码
-    // 1. 启用水下插件
+    // ✅ 
+    // 1. 
     SetNUUVModelsEnabled(true);
     
-    // 2. 强制禁用水面插件
+    // 2. 
     static gazebo::common::Time lastDisableTime;
     if ((simTime - lastDisableTime).Double() > 0.01)
     {
@@ -382,19 +416,19 @@ void PhaseSwitchPlugin::HandleBelow(const gazebo::common::Time& simTime)
         lastDisableTime = simTime;
     }
     
-    // 3. 清除水面插件的残留力
+    // 3. 
     if (data->surfacePlugin)
     {
         data->surfacePlugin->ClearLastForces();
         
-        // 验证清除效果
+        // 
         auto residualForce = data->surfacePlugin->GetLastTotalForce();
         if (residualForce.Length() > 0.01)
         {
             gzwarn << "[HandleBelow] Surface force not cleared! Residual: " 
                    << residualForce << " N" << std::endl;
             
-            // 强制再次清除
+            // 
             data->surfacePlugin->SetEnabled(false);
             data->surfacePlugin->ClearLastForces();
         }
@@ -572,7 +606,6 @@ void PhaseSwitchPlugin::HandleAbove(const gazebo::common::Time& simTime)
 
 
 
-
 bool PhaseSwitchPlugin::QueryWaveProbe(double& waterZ, 
                                        std::string& phaseName, 
                                        double& zOverL) const
@@ -609,19 +642,41 @@ bool PhaseSwitchPlugin::QueryWaveProbe(double& waterZ,
         
         return true;
     } else {
-
+        // Service failed (e.g. timeout or server not ready)
         data->serviceFailCount++;
         
-
         if (data->serviceFailCount % 100 == 1) {
-            gzwarn << "[PhaseSwitchPlugin] Failed to call WaveProbe service (count: " 
-                   << data->serviceFailCount << "). Using cached values." << std::endl;
+            gzwarn << "[PhaseSwitchPlugin] Service failed (count: " 
+                   << data->serviceFailCount << "). Using Fallback Logic." << std::endl;
         }
 
-        waterZ = data->lastKnownWaterZ;
-        phaseName = "UNKNOWN";
-        zOverL = 0.0;
-        return false;
+        // === FALLBACK LOGIC ===
+        // If ROS is broken, use simple physics to prevent "Damping in Air"
+        double robotZ = 0.0;
+        if (data->targetLink) {
+            robotZ = data->targetLink->WorldPose().Pos().Z();
+        }
+
+        // Assume water level is 0.0 if service is down
+        waterZ = 0.0; 
+        
+        if (robotZ > 0.2) { 
+            // We are clearly in the air -> Force state to ABOVE
+            phaseName = "ABOVE";
+            zOverL = 1.0;
+            return true; // Return TRUE so the state machine actually updates!
+        } 
+        else if (robotZ < -0.2) {
+            phaseName = "BELOW";
+            zOverL = -1.0;
+            return true;
+        }
+        else {
+            // Near surface, keep previous state or guess SURFACE
+            phaseName = "SURFACE";
+            zOverL = 0.0;
+            return true;
+        }
     }
 }
 PhaseSwitchPlugin::PhaseState PhaseSwitchPlugin::MapWaveProbePhase(
@@ -659,15 +714,16 @@ PhaseSwitchPlugin::PhaseState PhaseSwitchPlugin::MapWaveProbePhase(
 
 void PhaseSwitchPlugin::HandleSurface(const gazebo::common::Time& simTime)
 {
-    // ✅ 修改后的代码
-    // 1. 启用水面插件
+    // ✅ 
+    // 1. 
     SetNASVPluginsEnabled(true);
     
-    // 2. 强制禁用水下插件
+    // 2. 
     SetNUUVModelsEnabled(false);
     
-    // 3. 清除水下插件的残留力
-    auto nuuvModels = gazebo::HydrodynamicModelRegistry::GetInstance().GetModels();
+    // 3. 
+    // FIXED: Changed gazebo:: to nezha::
+    auto nuuvModels = nezha::HydrodynamicModelRegistry::GetInstance().GetModels();
     for (auto* model : nuuvModels)
     {
         if (model && model->IsEnabled())
@@ -677,21 +733,22 @@ void PhaseSwitchPlugin::HandleSurface(const gazebo::common::Time& simTime)
             model->SetEnabled(false);
         }
         
-        // 清除力报告
+        // 
         if (model)
         {
-            auto zeroReport = gazebo::HydrodynamicModel::ForceReport();
+            // FIXED: Changed gazebo:: to nezha::
+            auto zeroReport = nezha::HydrodynamicModel::ForceReport();
             zeroReport.totalForce = ignition::math::Vector3d::Zero;
             zeroReport.totalTorque = ignition::math::Vector3d::Zero;
-            // 注意: 这里假设有SetLastForceReport()方法,如果没有则跳过
+            // : SetLastForceReport(),
         }
     }
     
-    // 4. 更新活动插件名称
+    // 4. 
     data->activeHydrodynamicPlugin = data->surfacePluginName + 
                                     " (" + data->surfacePluginFile + ")";
     
-    // 5. 确保水面插件已启用
+    // 5. 
     if (data->surfacePlugin)
     {
         if (!data->surfacePlugin->IsEnabled())
@@ -701,7 +758,7 @@ void PhaseSwitchPlugin::HandleSurface(const gazebo::common::Time& simTime)
         }
     }
     
-        // 检查NUUV模型状态
+        // NUUV
         bool anyNuuvEnabled = false;
         for (auto* model : nuuvModels)
         {
@@ -824,7 +881,8 @@ void PhaseSwitchPlugin::SetNASVPluginsEnabled(bool enable)
 
 void PhaseSwitchPlugin::SetNUUVModelsEnabled(bool enable)
 {
-    auto models = gazebo::HydrodynamicModelRegistry::GetInstance().GetModels();
+    // FIXED: Changed gazebo:: to nezha::
+    auto models = nezha::HydrodynamicModelRegistry::GetInstance().GetModels();
     
     if (models.empty())
     {
@@ -969,7 +1027,8 @@ void PhaseSwitchPlugin::FindAndCachePlugins()
     // === Search for NUUV Model ===
     if (!data->fossenModel && data->targetLink)
     {
-        auto models = gazebo::HydrodynamicModelRegistry::GetInstance().GetModels();
+        // FIXED: Changed gazebo:: to nezha::
+        auto models = nezha::HydrodynamicModelRegistry::GetInstance().GetModels();
         
         // Get scoped name for comparison
         std::string targetScoped = data->targetLink->GetScopedName();
@@ -983,7 +1042,8 @@ void PhaseSwitchPlugin::FindAndCachePlugins()
             
             if (link->GetScopedName() == targetScoped)
             {
-                data->fossenModel = dynamic_cast<gazebo::HMFossen*>(model);
+                // FIXED: Changed gazebo:: to nezha::
+                data->fossenModel = dynamic_cast<nezha::HMFossen*>(model);
                 if (data->fossenModel)
                 {
                     gzmsg << "  OK Found matching NUUV model: " 
@@ -1004,7 +1064,6 @@ void PhaseSwitchPlugin::FindAndCachePlugins()
           << (data->fossenModel ? "OK FOUND" : "X NOT FOUND") << " |" << std::endl;
     gzmsg << "+------------------------------------------+" << std::endl;
 }
-
 
 
 

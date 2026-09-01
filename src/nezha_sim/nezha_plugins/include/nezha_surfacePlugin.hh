@@ -1,3 +1,9 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
 #ifndef _ASV_WAVE_SIM_GAZEBO_PLUGINS_HYDRODYNAMICS_PLUGIN_HH_
 #define _ASV_WAVE_SIM_GAZEBO_PLUGINS_HYDRODYNAMICS_PLUGIN_HH_
 
@@ -6,7 +12,11 @@
 #include <gazebo/physics/physics.hh>
 #include <memory>
 #include <Eigen/Dense> 
-
+// asv engine types used as members below
+#include "nasv_physics.hh"                                  // asv::Hydrodynamics, asv::HydrodynamicsParameters
+#include "asv_wave_sim_gazebo_plugins/CGALTypes.hh"         // asv::Mesh, asv::Point3, asv::Vector3
+#include "asv_wave_sim_gazebo_plugins/Wavefield.hh"         // asv::Wavefield, asv::WavefieldSampler
+#include "asv_wave_sim_gazebo_plugins/Grid.hh"              // asv::Grid
 #include <ros/ros.h>
 #include <ros/callback_queue.h>
 #include <ros/advertise_service_options.h>
@@ -108,7 +118,7 @@ namespace asv
     /// \brief Callback for gztopic "~/hydrodynamics"
     void OnHydrodynamicsMsg(ConstParam_VPtr &_msg);
     double ComputeWaveForceModulation(double _submersionRatio) const;
-    // ========== ✅ 新增: ROS Service 回调函数 ==========
+    // ========== ✅ : ROS Service  ==========
     /// \brief Service callback to get hydrodynamics forces
     /// \param[in] req Service request (empty)
     /// \param[out] res Service response with force components
@@ -119,6 +129,8 @@ namespace asv
     
     /// \brief ROS callback queue thread function
     void QueueThread();
+     void RegisterForcesService();  // <--- Add this line here
+
     // ==================================================
 
   private:
@@ -133,7 +145,13 @@ namespace asv
     
     /// \brief Pointer to the class private data
     std::shared_ptr<HydrodynamicsPluginPrivate> data;
-
+std::shared_ptr<asv::HydrodynamicsParameters> hydroParams;
+std::shared_ptr<const asv::Wavefield> wavefield;
+std::shared_ptr<asv::WavefieldSampler> wavefieldSampler;
+std::vector<std::shared_ptr<asv::Mesh>> initLinkMeshes;
+std::vector<std::shared_ptr<asv::Mesh>> linkMeshes;
+std::vector<std::shared_ptr<asv::Hydrodynamics>> hydrodynamics;
+std::string waveModelName;
 
   };
 

@@ -1,11 +1,17 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 <robot name="underwater_spotlight_gimbal" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
-  <!-- 可选参数 -->
+  <!-- Optional parameters -->
   <xacro:arg name="use_ignition" default="false"/>
   <xacro:property name="ns" value="/spotlight"/>
 
-  <!-- 材质 -->
+  <!-- Materials -->
   <material name="Grey"><color rgba="0.6 0.6 0.6 1.0"/></material>
   <material name="DarkGrey"><color rgba="0.3 0.3 0.3 1.0"/></material>
 
@@ -63,7 +69,7 @@
     </collision>
   </link>
 
-  <!-- 4) spotlight_link（灯体） -->
+  <!-- 4) spotlight_link (lamp body) -->
   <link name="spotlight_link">
     <inertial>
       <origin xyz="0 0 0.26" rpy="0 0 0"/>
@@ -71,7 +77,7 @@
       <inertia ixx="0.02" ixy="0" ixz="0" iyy="0.02" iyz="0" izz="0.02"/>
     </inertial>
     <visual>
-      <origin xyz="0 0 2.76" rpy="0 0 0"/> <!-- 长度5.0，中心在2.5，此处在pitch_link上再抬0.26，合计2.76 -->
+      <origin xyz="0 0 2.76" rpy="0 0 0"/> <!-- length 5.0, center at 2.5, raised an extra 0.26 above pitch_link, total 2.76 -->
       <geometry><cylinder radius="0.2" length="5.0"/></geometry>
       <material name="Grey"/>
     </visual>
@@ -82,7 +88,7 @@
   </link>
 
   <!-- joints -->
-  <!-- yaw（Z轴转动） -->
+  <!-- yaw (rotation about the Z axis) -->
   <joint name="base_yaw_joint" type="revolute">
     <parent link="base_link"/>
     <child link="yaw_link"/>
@@ -92,17 +98,17 @@
     <dynamics damping="0.1" friction="0.0"/>
   </joint>
 
-  <!-- pitch（Y轴转动） -->
+  <!-- pitch (rotation about the Y axis) -->
   <joint name="head_pitch_joint" type="revolute">
     <parent link="yaw_link"/>
     <child link="pitch_link"/>
-    <origin xyz="0 0 0.06" rpy="0 0 0"/> <!-- 由 yaw_link 顶部到 pitch_link 轴的微调 -->
+    <origin xyz="0 0 0.06" rpy="0 0 0"/> <!-- fine adjustment from the top of yaw_link to the pitch_link axis -->
     <axis xyz="0 1 0"/>
     <limit lower="-1.2" upper="1.2" effort="10" velocity="2.0"/>
     <dynamics damping="0.1" friction="0.0"/>
   </joint>
 
-  <!-- 固定灯体 -->
+  <!-- Fix the lamp body -->
   <joint name="pitch_to_spotlight" type="fixed">
     <parent link="pitch_link"/>
     <child link="spotlight_link"/>
@@ -110,14 +116,14 @@
   </joint>
 
 
-<!-- Gazebo 控制插件 -->
+<!-- Gazebo control plugin -->
 <gazebo>
   <plugin name="gazebo_ros_control" filename="libgazebo_ros_control.so">
     <robotNamespace>${ns}</robotNamespace>
   </plugin>
 </gazebo>
 
-<!-- transmissions，供 gazebo_ros_control 解析 -->
+<!-- transmissions, parsed by gazebo_ros_control -->
 <transmission name="base_yaw_trans">
   <type>transmission_interface/SimpleTransmission</type>
   <joint name="base_yaw_joint">
@@ -138,19 +144,19 @@
   </actuator>
 </transmission>
 
-  <!-- Gazebo 外观材质（可选） -->
+  <!-- Gazebo appearance materials (optional) -->
   <gazebo reference="base_link"><material>Gazebo/Grey</material></gazebo>
   <gazebo reference="yaw_link"><material>Gazebo/DarkGrey</material></gazebo>
   <gazebo reference="pitch_link"><material>Gazebo/Grey</material></gazebo>
 <gazebo reference="spotlight_link">
   <material>Gazebo/Grey</material>
 
-  <!-- 必须包含 name 属性 -->
+  <!-- Must include the name attribute -->
   <light name="spotlight_beam" type="spot">
     <pose>0 0 0.3 0 0 0</pose>
     <diffuse>1 1 1 1</diffuse>
     <specular>0.3 0.3 0.3 1</specular>
-    <!-- 衰减参数需完整且合理 -->
+    <!-- Attenuation parameters must be complete and reasonable -->
     <attenuation>
       <range>30</range>
       <constant>0.2</constant>

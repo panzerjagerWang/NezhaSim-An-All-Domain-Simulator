@@ -1,3 +1,9 @@
+#
+# Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+# Shanghai Jiao Tong University, The Nezha Lab
+# Key Laboratory of Polar Ecosystem and Climate Change
+# State Key Laboratory of Submarine Geoscience
+#
 cmake_minimum_required(VERSION 3.10)
 project(nezha_plugins LANGUAGES CXX)
 file(GLOB ASV_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cc")
@@ -32,6 +38,7 @@ add_compile_options(
 find_package(gazebo 11 REQUIRED)
 find_package(Boost  REQUIRED COMPONENTS system filesystem thread)
 find_package(TBB REQUIRED)
+find_package(CGAL REQUIRED) # <--- Add this line here
 find_package(gazebo_ros REQUIRED)
 find_package(gazebo_plugins REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
@@ -40,11 +47,13 @@ find_package(catkin REQUIRED COMPONENTS
   gazebo_ros
   rotors_comm
   rotors_gazebo_plugins
+  uuv_gazebo_plugins       
   uuv_gazebo_ros_plugins_msgs
   uuv_world_ros_plugins_msgs
   mav_msgs
   message_generation
 )
+
 find_package(Protobuf REQUIRED)
 set(PROTOBUF_IMPORT_DIRS "")
 set(GAZEBO_MSG_INCLUDE_DIRS "")
@@ -112,11 +121,14 @@ add_library(nezha_dynamics STATIC
 )
 target_include_directories(nezha_dynamics PUBLIC ${NEZHA_INCLUDE_DIRS})
 target_link_libraries(nezha_dynamics PUBLIC ${GAZEBO_LIBRARIES} ${Boost_LIBRARIES} TBB::tbb)
+add_dependencies(nezha_dynamics 
+  ${PROJECT_NAME}_generate_messages_cpp 
+  ${catkin_EXPORTED_TARGETS}
+)
 set_target_properties(nezha_dynamics PROPERTIES
   POSITION_INDEPENDENT_CODE ON        
   ARCHIVE_OUTPUT_DIRECTORY  ${LIB_OUTPUT_DIR}
 )
-
 
 install(TARGETS nezha_dynamics
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR})
@@ -143,14 +155,19 @@ add_library(asv_wave_core STATIC
   ${ASV_SRC}/Utilities.cc
   ${ASV_SRC}/Convert.cc
   ${ASV_SRC}/Grid.cc
-  ${ASV_SRC}/Wavefield.cc
+  # ${ASV_SRC}/Wavefield.cc      <--- REMOVE OR COMMENT OUT
   ${ASV_SRC}/WavefieldEntity.cc
   ${ASV_SRC}/Geometry.cc
   ${ASV_SRC}/MeshTools.cc
   ${ASV_SRC}/Algorithm.cc
-  ${ASV_SRC}/Physics.cc
+  # ${ASV_SRC}/Physics.cc        <--- REMOVE OR COMMENT OUT
   ${ASV_SRC}/Gazebo.cc
   ${ASV_SRC}/PhysicalConstants.cc
+  
+  # ADD YOUR CUSTOM FILES HERE INSTEAD:
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/nasv_physics.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/nasv_waveField.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/nezha_getWavefield.cc
 )
 set_target_properties(asv_wave_core PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
@@ -176,8 +193,8 @@ link_plugin_common(nezha_surface_plugin nezha_dynamics asv_wave_core)
 # 5.2 Motor Model
 add_library(nezha_motor_model SHARED
   src/nezha_motorModel.cpp
-  src/nezha_getWavefield.cc        # ← 添加这个
-  src/nasv_waveField.cc            # ← 如果也需要的话
+  src/nezha_getWavefield.cc        # <- add this
+  src/nasv_waveField.cc            # <- include this too if needed
 )
 
 
@@ -258,7 +275,7 @@ add_library(nezha_terrain_detector_plugin SHARED
 link_plugin_common(nezha_terrain_detector_plugin)
 target_link_libraries(nezha_terrain_detector_plugin PUBLIC nezha_dynamics)
 
-# 5.5 Wheel Efficiency Plugin (带波浪场支持)
+# 5.5 Wheel Efficiency Plugin (with wavefield support)
 add_library(nezha_wheel_efficiency_plugin SHARED
   src/nezha_wheelEfficiency.cpp
   src/nezha_getWavefield.cc      
@@ -287,7 +304,11 @@ add_library(nezha_underwater_plugin SHARED
   src/nezha_underwaterPlugin.cc
 )
 link_plugin_common(nezha_underwater_plugin)
-target_link_libraries(nezha_underwater_plugin PUBLIC nezha_dynamics)
+target_link_libraries(nezha_underwater_plugin 
+  PUBLIC 
+  nezha_dynamics
+)
+
 
 
 add_library(nezha_wave_probe_plugin SHARED
@@ -363,14 +384,87 @@ add_library(nezha_phase_switch_plugin SHARED
 link_plugin_common(nezha_phase_switch_plugin)
 target_link_libraries(nezha_phase_switch_plugin PUBLIC nezha_dynamics)
 add_dependencies(nezha_phase_switch_plugin ${catkin_EXPORTED_TARGETS})
+# ==============================================================================
+# 5.X MAVLink Interface Plugin (nezha_mavlink_interface)
+# ==============================================================================
 
+# 1. Find Eigen3 (the sources use <Eigen/Eigen>)
+find_package(Eigen3 REQUIRED)
+
+# 2. Find the MAVLink headers
+# Try the standard lookup first, then fall back to the default ROS install path
+find_package(mavlink QUIET)
+if(mavlink_FOUND)
+  set(MAVLINK_INCLUDE_DIRS ${mavlink_INCLUDE_DIRS})
+elseif(EXISTS /opt/ros/$ENV{ROS_DISTRO}/include/mavlink/v2.0/)
+  set(MAVLINK_INCLUDE_DIRS "/opt/ros/$ENV{ROS_DISTRO}/include/mavlink/v2.0/")
+else()
+  message(FATAL_ERROR "MAVLink headers not found! Please install ros-$ENV{ROS_DISTRO}-mavlink")
+endif()
+message(STATUS "[nezha_mavlink_interface] MAVLINK_INCLUDE_DIRS = ${MAVLINK_INCLUDE_DIRS}")
+
+# 3. Define the MAVLink plugin target
+# Note: the original version relies on src/geo_mag_declination.cpp to compute magnetic declination.
+# If you also have this file in your src/ directory, uncomment the line below!
+add_library(nezha_mavlink_interface SHARED
+  src/nezha_mavlink_interface.cpp
+  src/geo_mag_declination.cpp 
+)
+
+# 4. Use the custom common link helper function
+link_plugin_common(nezha_mavlink_interface)
+
+# 5. Add the specific header search paths
+target_include_directories(nezha_mavlink_interface PRIVATE
+  ${MAVLINK_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
+  "${ROTORS_MSGS_DIR}"           # to locate the .pb.h headers
+  "${CMAKE_CURRENT_BINARY_DIR}"  # to locate the dynamically generated protobuf headers
+)
+
+# 6. Link the Protobuf library
+if (TARGET protobuf::libprotobuf)
+  target_link_libraries(nezha_mavlink_interface PRIVATE protobuf::libprotobuf)
+else()
+  target_link_libraries(nezha_mavlink_interface PRIVATE ${PROTOBUF_LIBRARIES})
+endif()
+
+# 7. Link the core dynamics library and add the ROS dependencies
+target_link_libraries(nezha_mavlink_interface PUBLIC nezha_dynamics)
+add_dependencies(nezha_mavlink_interface ${catkin_EXPORTED_TARGETS})
+
+# 8. [Critical] Handle the Protobuf source file dependency
+# Because nezha_mavlink_interface uses protobuf messages such as CommandMotorSpeed,
+# following the same approach as nezha_motor_model earlier, we must also compile the generated .pb.cc files,
+# otherwise an undefined reference error will occur.
+if(ROTORS_PB_SRCS)
+  target_sources(nezha_mavlink_interface PRIVATE ${ROTORS_PB_SRCS})
+else()
+  target_sources(nezha_mavlink_interface PRIVATE ${ROTORS_PROTO_SRCS})
+endif()
+
+# 9. Install rule (optional, if you want it included in the install stage)
+# install(TARGETS nezha_mavlink_interface LIBRARY DESTINATION ${GAZEBO_PLUGIN_INSTALL_DIR})
+
+# 5.10 Unified Hydrodynamics Plugin (NEW)
+add_library(nezha_unified_plugin SHARED
+  src/nezha_unified_plugin.cc
+)
+# Link against common deps, nezha_dynamics, and ASV wave core
+link_plugin_common(nezha_unified_plugin nezha_dynamics asv_wave_core CGAL::CGAL)
+
+
+# Ensure ROS messages are generated before building
+add_dependencies(nezha_unified_plugin ${catkin_EXPORTED_TARGETS})
 
 install(TARGETS nezha_wave_probe_plugin
                 nezha_transmedia_drag_plugin
                 nezha_buoyant_object_plugin
                 nezha_wavefield_plugin
                 nezha_phase_switch_plugin
+                nezha_unified_plugin        # <--- This requires the block above to exist
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+
 
 install(DIRECTORY include/
         DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})

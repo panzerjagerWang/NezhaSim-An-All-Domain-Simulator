@@ -1,4 +1,10 @@
 <?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="gantry_robot">
     <xacro:include filename="$(find nezha_description)/nezha_gantry_velocity/config/materials.xacro" />
   <xacro:include filename="$(find nezha_description)/nezha_gantry_velocity/config/nezha_gantry.gazebo" />

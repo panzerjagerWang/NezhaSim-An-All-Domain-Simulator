@@ -1,0 +1,286 @@
+<?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
+<robot name="iris" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find nezha_description)/${namespace}/UAV/component_snippets.xacro" />
+  <xacro:include filename="$(find nezha_description)/common/UAV/UAV_plugin.xacro" />
+
+  <!-- ================================================================ -->
+  <!-- mavlink_interface_macro: full HITL bridge definition              -->
+  <!-- ================================================================ -->
+  <xacro:macro name="mavlink_interface_macro"
+    params="namespace mavlink_sub_topic imu_sub_topic mavlink_pub_topic
+            motors_speeds_pub_topic gps_update_freq rotor_count
+            reference_magnetic_field_north reference_magnetic_field_east
+            reference_magnetic_field_down reference_latitude
+            reference_longitude reference_altitude">
+    <gazebo>
+      <plugin name="mavlink_interface" filename="libgazebo_mavlink_interface.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <mavlinkControlSubTopic>${mavlink_sub_topic}</mavlinkControlSubTopic>
+        <imuSubTopic>${imu_sub_topic}</imuSubTopic>
+        <!-- PX4 sensor-plugin topics: must match the libgazebo_*_plugin pubs below.
+             All PX4 plugins resolve topics as "~/<model_name><topic>". -->
+        <magSubTopic>/mag</magSubTopic>
+        <baroSubTopic>/baro</baroSubTopic>
+        <gpsSubTopic>/gps</gpsSubTopic>
+        <mavlinkHilSensorPubTopic>${mavlink_pub_topic}</mavlinkHilSensorPubTopic>
+        <motorSpeedsPubTopic>${motors_speeds_pub_topic}</motorSpeedsPubTopic>
+        <gpsUpdateFreq>${gps_update_freq}</gpsUpdateFreq>
+        <rotorCount>${rotor_count}</rotorCount>
+        <referenceMagNorth>${reference_magnetic_field_north}</referenceMagNorth>
+        <referenceMagEast>${reference_magnetic_field_east}</referenceMagEast>
+        <referenceMagDown>${reference_magnetic_field_down}</referenceMagDown>
+        <referenceLatitude>${reference_latitude}</referenceLatitude>
+        <referenceLongitude>${reference_longitude}</referenceLongitude>
+        <referenceAltitude>${reference_altitude}</referenceAltitude>
+        <serialEnabled>true</serialEnabled>
+        <serialDevice>/dev/ttyACM0</serialDevice>
+        <baudRate>921600</baudRate>
+        <hil_mode>true</hil_mode>
+        <hil_state_level>0</hil_state_level>
+        <enable_lockstep>false</enable_lockstep>
+        <!-- Maps PX4 HIL_ACTUATOR_CONTROLS (0..1) to rotor angular velocity
+             published on motorSpeedsPubTopic. Without this, input_scaling=0
+             and the motors never spin (vehicle won't lift). No <joint_name>,
+             so actuation goes through the RotorS motor_model plugins. -->
+        <control_channels>
+          <channel name="rotor1">
+            <input_index>0</input_index>
+            <input_offset>0</input_offset>
+            <input_scaling>1000</input_scaling>
+            <zero_position_disarmed>0</zero_position_disarmed>
+            <zero_position_armed>100</zero_position_armed>
+            <joint_control_type>velocity</joint_control_type>
+          </channel>
+          <channel name="rotor2">
+            <input_index>1</input_index>
+            <input_offset>0</input_offset>
+            <input_scaling>1000</input_scaling>
+            <zero_position_disarmed>0</zero_position_disarmed>
+            <zero_position_armed>100</zero_position_armed>
+            <joint_control_type>velocity</joint_control_type>
+          </channel>
+          <channel name="rotor3">
+            <input_index>2</input_index>
+            <input_offset>0</input_offset>
+            <input_scaling>1000</input_scaling>
+            <zero_position_disarmed>0</zero_position_disarmed>
+            <zero_position_armed>100</zero_position_armed>
+            <joint_control_type>velocity</joint_control_type>
+          </channel>
+          <channel name="rotor4">
+            <input_index>3</input_index>
+            <input_offset>0</input_offset>
+            <input_scaling>1000</input_scaling>
+            <zero_position_disarmed>0</zero_position_disarmed>
+            <zero_position_armed>100</zero_position_armed>
+            <joint_control_type>velocity</joint_control_type>
+          </channel>
+        </control_channels>
+      </plugin>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- ================================================================ -->
+  <!-- default_mavlink_interface: convenience wrapper with preset values -->
+  <!-- ================================================================ -->
+  <xacro:macro name="default_mavlink_interface" params="namespace imu_sub_topic rotor_count">
+    <xacro:mavlink_interface_macro
+      namespace="${namespace}"
+      mavlink_sub_topic="/mavlink/from"
+      imu_sub_topic="${imu_sub_topic}"
+      mavlink_pub_topic="/mavlink/to"
+      motors_speeds_pub_topic="/gazebo/command/motor_speed"
+      gps_update_freq="5.0"
+      rotor_count="${rotor_count}"
+      reference_magnetic_field_north="0.21475"
+      reference_magnetic_field_east="0.00797"
+      reference_magnetic_field_down="0.42817"
+      reference_latitude="47.3667"
+      reference_longitude="8.5500"
+      reference_altitude="500.0">
+    </xacro:mavlink_interface_macro>
+  </xacro:macro>
+
+  <!-- ================================================================ -->
+  <!-- Sensors                                                          -->
+  <!--   Non-HITL: RotorS sensor plugins (publish ROS + gz_sensor_msgs) -->
+  <!--   HITL:     PX4 sitl_gazebo plugins. These publish the           -->
+  <!--            sensor_msgs::msgs::* protobufs that mavlink_interface  -->
+  <!--            subscribes to. The RotorS plugins publish a different  -->
+  <!--            protobuf type (gz_sensor_msgs::Imu) on the SAME topic, -->
+  <!--            so the two sets are mutually exclusive (gazebo         -->
+  <!--            transport only links matching message types).         -->
+  <!-- ================================================================ -->
+  <xacro:unless value="$(arg enable_mavlink_interface)">
+    <xacro:default_imu             namespace="${namespace}" parent_link="${namespace}/base_link" />
+    <xacro:default_gps             namespace="${namespace}" parent_link="${namespace}/base_link" />
+    <xacro:default_magnetometer    namespace="${namespace}" parent_link="${namespace}/base_link" />
+    <xacro:default_pressure_sensor namespace="${namespace}" parent_link="${namespace}/base_link" />
+  </xacro:unless>
+
+  <xacro:if value="$(arg enable_mavlink_interface)">
+    <!-- PX4 IMU: publishes sensor_msgs::msgs::Imu to ~/<model>/imu -->
+    <gazebo>
+      <plugin name="px4_imu_plugin" filename="libgazebo_imu_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <linkName>${namespace}/base_link</linkName>
+        <imuTopic>/imu</imuTopic>
+        <gyroscopeNoiseDensity>0.00018665</gyroscopeNoiseDensity>
+        <gyroscopeRandomWalk>3.8785e-05</gyroscopeRandomWalk>
+        <gyroscopeBiasCorrelationTime>1000.0</gyroscopeBiasCorrelationTime>
+        <gyroscopeTurnOnBiasSigma>0.0087</gyroscopeTurnOnBiasSigma>
+        <accelerometerNoiseDensity>0.00186</accelerometerNoiseDensity>
+        <accelerometerRandomWalk>0.006</accelerometerRandomWalk>
+        <accelerometerBiasCorrelationTime>300.0</accelerometerBiasCorrelationTime>
+        <accelerometerTurnOnBiasSigma>0.196</accelerometerTurnOnBiasSigma>
+      </plugin>
+    </gazebo>
+    <!-- Groundtruth: feeds lat/lon to the magnetometer model -->
+    <gazebo>
+      <plugin name="px4_groundtruth_plugin" filename="libgazebo_groundtruth_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+      </plugin>
+    </gazebo>
+    <!-- PX4 magnetometer: publishes sensor_msgs::msgs::MagneticField to ~/<model>/mag -->
+    <gazebo>
+      <plugin name="px4_mag_plugin" filename="libgazebo_magnetometer_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <pubRate>100</pubRate>
+        <noiseDensity>0.0004</noiseDensity>
+        <randomWalk>6.4e-06</randomWalk>
+        <biasCorrelationTime>600</biasCorrelationTime>
+        <magTopic>/mag</magTopic>
+      </plugin>
+    </gazebo>
+    <!-- PX4 barometer: publishes sensor_msgs::msgs::Pressure to ~/<model>/baro -->
+    <gazebo>
+      <plugin name="px4_baro_plugin" filename="libgazebo_barometer_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <!-- pubRate in SIM time; at RTF<1 the wall-clock rate is lower, so keep
+             this high enough that wall-rate stays above PX4's baro timeout. -->
+        <pubRate>120</pubRate>
+        <baroTopic>/baro</baroTopic>
+      </plugin>
+    </gazebo>
+
+    <!-- PX4 GPS: a <sensor type="gps"> on a dedicated link. mavlink_interface
+         auto-discovers it by scanning for a joint whose name matches /gps/,
+         then subscribes to ~/<model>/link/<sensor_from_joint_name>. The joint
+         is named "gps0_joint" (no namespace prefix) so the derived sensor name
+         is "gps0", matching the plugin's <topic>gps0</topic>. Fixed-joint
+         lumping is disabled so the joint survives URDF->SDF for discovery.
+         GPS origin comes from the world's <spherical_coordinates>. -->
+    <link name="${namespace}/gps0_link">
+      <inertial>
+        <mass value="0.015"/>
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+      </inertial>
+    </link>
+    <joint name="gps0_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/gps0_link"/>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    </joint>
+    <gazebo reference="gps0_joint">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+    <gazebo reference="${namespace}/gps0_link">
+      <sensor name="gps0" type="gps">
+        <pose>0 0 0 0 0 0</pose>
+        <update_rate>5.0</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <plugin name="gps0_plugin" filename="libgazebo_gps_plugin.so">
+          <robotNamespace>${namespace}</robotNamespace>
+          <topic>gps0</topic>
+          <gpsNoise>true</gpsNoise>
+          <gpsXYRandomWalk>2.0</gpsXYRandomWalk>
+          <gpsZRandomWalk>4.0</gpsZRandomWalk>
+          <gpsXYNoiseDensity>2.0e-4</gpsXYNoiseDensity>
+          <gpsZNoiseDensity>4.0e-4</gpsZNoiseDensity>
+          <gpsVXYNoiseDensity>0.2</gpsVXYNoiseDensity>
+          <gpsVZNoiseDensity>0.4</gpsVZNoiseDensity>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- HITL MAVLink interface (opens /dev/ttyACM0 to the Pixhawk) -->
+    <xacro:default_mavlink_interface
+      namespace="${namespace}"
+      imu_sub_topic="/imu"
+      rotor_count="4"
+    />
+  </xacro:if>
+
+  <!-- ================================================================ -->
+  <!-- Rotors                                                            -->
+  <!-- ================================================================ -->
+
+  <!-- Rotor 0: front-right, CCW -->
+  <xacro:vertical_rotor
+    robot_namespace="${namespace}" suffix="front_right" direction="ccw"
+    motor_constant="${motor_constant}" moment_constant="${moment_constant}"
+    parent="${namespace}/base_link" mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}" time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}" max_rot_velocity="${max_rot_velocity}"
+    motor_number="0" rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Blue" use_own_mesh="false" mesh="">
+    <origin xyz="${arm_length_front_x} -${arm_length_front_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+  <!-- Rotor 1: back-left, CCW -->
+  <xacro:vertical_rotor
+    robot_namespace="${namespace}" suffix="back_left" direction="ccw"
+    motor_constant="${motor_constant}" moment_constant="${moment_constant}"
+    parent="${namespace}/base_link" mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}" time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}" max_rot_velocity="${max_rot_velocity}"
+    motor_number="1" rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Red" use_own_mesh="false" mesh="">
+    <origin xyz="-${arm_length_back_x} ${arm_length_back_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+  <!-- Rotor 2: front-left, CW -->
+  <xacro:vertical_rotor
+    robot_namespace="${namespace}" suffix="front_left" direction="cw"
+    motor_constant="${motor_constant}" moment_constant="${moment_constant}"
+    parent="${namespace}/base_link" mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}" time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}" max_rot_velocity="${max_rot_velocity}"
+    motor_number="2" rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Blue" use_own_mesh="false" mesh="">
+    <origin xyz="${arm_length_front_x} ${arm_length_front_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+  <!-- Rotor 3: back-right, CW -->
+  <xacro:vertical_rotor
+    robot_namespace="${namespace}" suffix="back_right" direction="cw"
+    motor_constant="${motor_constant}" moment_constant="${moment_constant}"
+    parent="${namespace}/base_link" mass_rotor="${mass_rotor}"
+    radius_rotor="${radius_rotor}" time_constant_up="${time_constant_up}"
+    time_constant_down="${time_constant_down}" max_rot_velocity="${max_rot_velocity}"
+    motor_number="3" rotor_drag_coefficient="${rotor_drag_coefficient}"
+    rolling_moment_coefficient="${rolling_moment_coefficient}"
+    color="Red" use_own_mesh="false" mesh="">
+    <origin xyz="-${arm_length_back_x} -${arm_length_back_y} ${rotor_offset_top}" rpy="0 0 0" />
+    <xacro:insert_block name="rotor_inertia" />
+  </xacro:vertical_rotor>
+
+</robot>
+
+
+

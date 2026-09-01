@@ -1,3 +1,9 @@
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+  Key Laboratory of Polar Ecosystem and Climate Change
+  State Key Laboratory of Submarine Geoscience
+-->
 <robot>
   <!-- This file is a placeholder which is included by default from
        husky.urdf.xacro. If a robot is being customized and requires

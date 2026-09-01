@@ -1,0 +1,23 @@
+//
+// Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+// Shanghai Jiao Tong University, The Nezha Lab
+// Key Laboratory of Polar Ecosystem and Climate Change
+// State Key Laboratory of Submarine Geoscience
+//
+material nezha/nezha_ripple
+{
+    technique
+    {
+        pass
+        {
+            lighting off
+            scene_blend alpha_blend
+            depth_write off
+            texture_unit
+            {
+                anim_texture ripple_0.png ripple_1.png ripple_2.png ripple_3.png ripple_4.png ripple_5.png ripple_6.png ripple_7.png ripple_8.png ripple_9.png ripple_10.png ripple_11.png ripple_3.png ripple_4.png ripple_5.png ripple_6.png ripple_7.png ripple_8.png ripple_9.png ripple_10.png ripple_11.png 3
+            }
+        }
+    }
+}
+

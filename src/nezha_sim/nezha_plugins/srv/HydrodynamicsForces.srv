@@ -1,3 +1,9 @@
+#
+# Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+# Shanghai Jiao Tong University, The Nezha Lab
+# Key Laboratory of Polar Ecosystem and Climate Change
+# State Key Laboratory of Submarine Geoscience
+#
 
 ---
 # Response
@@ -25,6 +31,13 @@ float64 added_mass_z
 float64 coriolis_x
 float64 coriolis_y
 float64 coriolis_z
+
+# 垂向升沉/入水阻尼力 (World Frame) -- heave damping + quadratic water-entry drag.
+# Reported separately so the SAMPLED resultant equals the TRUE applied vertical
+# force. Zero on the legacy/baseline plugins, which have no heave term.
+float64 heave_x
+float64 heave_y
+float64 heave_z
 
 # 浸没比例
 float64 submersion_ratio

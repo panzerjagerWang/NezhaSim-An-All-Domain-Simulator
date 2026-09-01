@@ -1,0 +1,46 @@
+<!--
+  Hardware-in-the-loop for the DEDICATED nezha_mini_hil model (PX4 over
+  /dev/ttyACM0). Clean HITL pipeline modelled on nezha_f_hitl.launch:
+  no RotorS controller / IMU / ground-truth (those collide with the PX4
+  sensor plugins). Architecture A; QGC connects over UDP 14550. See HITL_SETUP.md.
+-->
+<launch>
+  <arg name="mav_name" default="nezha_mini_hil"/>
+  <!-- HAUV ocean world (nezha_ocean_waves). Use nezha_hitl for no-water aerial. -->
+  <arg name="world_name" default="nezha_hitl_ocean"/>
+  <arg name="enable_logging" default="false"/>
+  <arg name="enable_ground_truth" default="false"/>   <!-- omitted in the model anyway -->
+  <arg name="log_file" default="$(arg mav_name)"/>
+  <arg name="gui" default="true"/>
+  <arg name="paused" default="false"/>
+
+  <env name="GAZEBO_MODEL_PATH" value="${GAZEBO_MODEL_PATH}:$(find rotors_gazebo)/models:$(find nezha_gazebo)/models"/>
+  <env name="GAZEBO_RESOURCE_PATH" value="${GAZEBO_RESOURCE_PATH}:$(find rotors_gazebo)/models"/>
+
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <arg name="world_name" value="$(find nezha_gazebo)/worlds/$(arg world_name).world"/>
+    <arg name="paused" value="$(arg paused)"/>
+    <arg name="use_sim_time" value="false"/>   <!-- HITL = wall clock, no lockstep -->
+    <arg name="gui" value="$(arg gui)"/>
+    <arg name="verbose" value="true"/>
+  </include>
+
+  <include file="$(find uuv_assistants)/launch/message_to_tf.launch">
+    <arg name="namespace" value="$(arg mav_name)"/>
+    <arg name="world_frame" value="world"/>
+    <arg name="child_frame_id" value="/$(arg mav_name)/base_link"/>
+  </include>
+
+  <group ns="$(arg mav_name)">
+    <include file="$(find nezha_gazebo)/launch/spawn_mav.launch">
+      <arg name="mav_name" value="$(arg mav_name)"/>
+      <arg name="model" value="$(find nezha_description)/$(arg mav_name)/config/mav_generic_odometry_sensor.gazebo"/>
+      <arg name="enable_logging" value="$(arg enable_logging)"/>
+      <arg name="enable_ground_truth" value="$(arg enable_ground_truth)"/>
+      <arg name="enable_mavlink_interface" value="true"/>
+      <arg name="log_file" value="$(arg log_file)"/>
+    </include>
+    <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>
+    <node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher"/>
+  </group>
+</launch>

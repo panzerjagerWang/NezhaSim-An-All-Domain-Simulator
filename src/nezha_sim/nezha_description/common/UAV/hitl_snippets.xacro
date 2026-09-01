@@ -1,0 +1,176 @@
+<?xml version="1.0"?>
+<!--
+  Author: Jiaqing "Lance" Wang <jiaqing.wang@sjtu.edu.cn>
+  Shanghai Jiao Tong University, The Nezha Lab
+
+  Reusable PX4 HARDWARE-IN-THE-LOOP snippet.
+
+  One macro, xacro:px4_hitl, emits everything PX4 needs to fly a multirotor in
+  HITL against a real flight controller over serial:
+    * PX4 sitl_gazebo sensor plugins (IMU / magnetometer / barometer /
+      groundtruth) publishing sensor_msgs::msgs::* on /imu /mag /baro,
+    * a GPS sensor (auto-discovered by mavlink_interface via the "gps0_joint"),
+    * the mavlink_interface plugin (opens the serial port, speaks HIL), with the
+      <control_channels> block that scales HIL_ACTUATOR_CONTROLS to rotor speed.
+
+  IMPORTANT: these PX4 plugins publish a DIFFERENT protobuf type than the RotorS
+  / nezha sensor+motor plugins, so a HITL model must use the PX4 sensors here
+  AND the PX4 motor model (see common/UAV/UAV_plugin.xacro, gated on
+  enable_mavlink_interface). Do not mix the two sets on the same topics.
+
+  To put any multirotor into HITL:
+    <xacro:include filename="$(find nezha_description)/common/UAV/hitl_snippets.xacro"/>
+    <xacro:if value="$(arg enable_mavlink_interface)">
+      <xacro:px4_hitl namespace="${namespace}" rotor_count="4"/>
+    </xacro:if>
+  and wrap the robot's RotorS sensors (default_imu/gps/magnetometer/pressure)
+  in <xacro:unless value="$(arg enable_mavlink_interface)"> so they don't clash.
+-->
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <!-- One PX4 motor control channel (maps actuator 0..1 -> rotor rad/s) -->
+  <xacro:macro name="px4_control_channel" params="index">
+    <channel name="rotor${index}">
+      <input_index>${index}</input_index>
+      <input_offset>0</input_offset>
+      <input_scaling>1000</input_scaling>
+      <zero_position_disarmed>0</zero_position_disarmed>
+      <zero_position_armed>100</zero_position_armed>
+      <joint_control_type>velocity</joint_control_type>
+    </channel>
+  </xacro:macro>
+
+  <!-- Recursively emit n control channels (indices 0..n-1) -->
+  <xacro:macro name="px4_control_channels" params="n i:=^|0">
+    <xacro:if value="${i &lt; n}">
+      <xacro:px4_control_channel index="${i}"/>
+      <xacro:px4_control_channels n="${n}" i="${i+1}"/>
+    </xacro:if>
+  </xacro:macro>
+
+  <!-- Full HITL sensor suite + mavlink_interface -->
+  <xacro:macro name="px4_hitl"
+    params="namespace rotor_count:=4
+            serial_device:=/dev/ttyACM0 baud_rate:=921600
+            ref_lat:=47.3977418 ref_lon:=8.5455938 ref_alt:=488.0
+            ref_mag_n:=0.21475 ref_mag_e:=0.00797 ref_mag_d:=0.42817">
+
+    <!-- IMU -->
+    <gazebo>
+      <plugin name="px4_imu_plugin" filename="libgazebo_imu_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <linkName>${namespace}/base_link</linkName>
+        <imuTopic>/imu</imuTopic>
+        <gyroscopeNoiseDensity>0.00018665</gyroscopeNoiseDensity>
+        <gyroscopeRandomWalk>3.8785e-05</gyroscopeRandomWalk>
+        <gyroscopeBiasCorrelationTime>1000.0</gyroscopeBiasCorrelationTime>
+        <gyroscopeTurnOnBiasSigma>0.0087</gyroscopeTurnOnBiasSigma>
+        <accelerometerNoiseDensity>0.00186</accelerometerNoiseDensity>
+        <accelerometerRandomWalk>0.006</accelerometerRandomWalk>
+        <accelerometerBiasCorrelationTime>300.0</accelerometerBiasCorrelationTime>
+        <accelerometerTurnOnBiasSigma>0.196</accelerometerTurnOnBiasSigma>
+      </plugin>
+    </gazebo>
+
+    <!-- Groundtruth (feeds lat/lon to the magnetometer) -->
+    <gazebo>
+      <plugin name="px4_groundtruth_plugin" filename="libgazebo_groundtruth_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+      </plugin>
+    </gazebo>
+
+    <!-- Magnetometer -->
+    <gazebo>
+      <plugin name="px4_mag_plugin" filename="libgazebo_magnetometer_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <!-- High rate so the wall-clock rate stays above PX4's mag timeout even
+             when RTF dips in the heavy ocean (wavefield) world. -->
+        <pubRate>150</pubRate>
+        <noiseDensity>0.0004</noiseDensity>
+        <randomWalk>6.4e-06</randomWalk>
+        <biasCorrelationTime>600</biasCorrelationTime>
+        <magTopic>/mag</magTopic>
+      </plugin>
+    </gazebo>
+
+    <!-- Barometer (pubRate high so wall-rate stays above PX4 timeout at RTF<1) -->
+    <gazebo>
+      <plugin name="px4_baro_plugin" filename="libgazebo_barometer_plugin.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <pubRate>120</pubRate>
+        <baroTopic>/baro</baroTopic>
+      </plugin>
+    </gazebo>
+
+    <!-- GPS: dedicated link + <sensor type="gps">. mavlink_interface discovers
+         it via the joint name matching /gps/; topic must equal the sensor name
+         derived from that joint (gps0). Fixed-joint lumping disabled so the
+         joint survives URDF->SDF. Origin from world <spherical_coordinates>. -->
+    <link name="${namespace}/gps0_link">
+      <inertial>
+        <mass value="0.015"/>
+        <inertia ixx="1e-5" ixy="0" ixz="0" iyy="1e-5" iyz="0" izz="1e-5"/>
+      </inertial>
+    </link>
+    <joint name="gps0_joint" type="fixed">
+      <parent link="${namespace}/base_link"/>
+      <child link="${namespace}/gps0_link"/>
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    </joint>
+    <gazebo reference="gps0_joint">
+      <disableFixedJointLumping>true</disableFixedJointLumping>
+      <preserveFixedJoint>true</preserveFixedJoint>
+    </gazebo>
+    <gazebo reference="${namespace}/gps0_link">
+      <sensor name="gps0" type="gps">
+        <pose>0 0 0 0 0 0</pose>
+        <update_rate>5.0</update_rate>
+        <always_on>true</always_on>
+        <visualize>false</visualize>
+        <plugin name="gps0_plugin" filename="libgazebo_gps_plugin.so">
+          <robotNamespace>${namespace}</robotNamespace>
+          <topic>gps0</topic>
+          <gpsNoise>true</gpsNoise>
+          <gpsXYRandomWalk>2.0</gpsXYRandomWalk>
+          <gpsZRandomWalk>4.0</gpsZRandomWalk>
+          <gpsXYNoiseDensity>2.0e-4</gpsXYNoiseDensity>
+          <gpsZNoiseDensity>4.0e-4</gpsZNoiseDensity>
+          <gpsVXYNoiseDensity>0.2</gpsVXYNoiseDensity>
+          <gpsVZNoiseDensity>0.4</gpsVZNoiseDensity>
+        </plugin>
+      </sensor>
+    </gazebo>
+
+    <!-- MAVLink interface: opens the FC serial port, speaks HIL, forwards GCS
+         traffic to QGroundControl (udp 14550). -->
+    <gazebo>
+      <plugin name="mavlink_interface" filename="libgazebo_mavlink_interface.so">
+        <robotNamespace>${namespace}</robotNamespace>
+        <imuSubTopic>/imu</imuSubTopic>
+        <magSubTopic>/mag</magSubTopic>
+        <baroSubTopic>/baro</baroSubTopic>
+        <gpsSubTopic>/gps</gpsSubTopic>
+        <mavlinkControlSubTopic>/mavlink/from</mavlinkControlSubTopic>
+        <mavlinkHilSensorPubTopic>/mavlink/to</mavlinkHilSensorPubTopic>
+        <motorSpeedsPubTopic>/gazebo/command/motor_speed</motorSpeedsPubTopic>
+        <rotorCount>${rotor_count}</rotorCount>
+        <referenceMagNorth>${ref_mag_n}</referenceMagNorth>
+        <referenceMagEast>${ref_mag_e}</referenceMagEast>
+        <referenceMagDown>${ref_mag_d}</referenceMagDown>
+        <referenceLatitude>${ref_lat}</referenceLatitude>
+        <referenceLongitude>${ref_lon}</referenceLongitude>
+        <referenceAltitude>${ref_alt}</referenceAltitude>
+        <serialEnabled>true</serialEnabled>
+        <serialDevice>${serial_device}</serialDevice>
+        <baudRate>${baud_rate}</baudRate>
+        <hil_mode>true</hil_mode>
+        <hil_state_level>0</hil_state_level>
+        <enable_lockstep>false</enable_lockstep>
+        <control_channels>
+          <xacro:px4_control_channels n="${rotor_count}"/>
+        </control_channels>
+      </plugin>
+    </gazebo>
+
+  </xacro:macro>
+</robot>
