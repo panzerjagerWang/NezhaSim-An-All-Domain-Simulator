@@ -14,23 +14,6 @@
 
 ---
 
-## Meet NezhaSim2
-
-**NezhaSim2 is the next-generation simulator for vehicles that cross the
-air–water interface.** A shared deterministic C++ physics core drives headless,
-ROS 2/Gazebo Harmonic, MuJoCo, and NVIDIA Isaac Sim backends, with decomposed
-forces, PX4 integration, mission tooling, and underwater perception workflows.
-
-<p align="center">
-  <img src="src/nezha_sim/docs/assets/nezhasim2-mini.gif" width="285" alt="NezhaSim2 transmedium simulation and force visualization"/>
-  &nbsp;
-  <img src="src/nezha_sim/docs/assets/nezhasim2-reconstruction.gif" width="500" alt="NezhaSim2 underwater mission reconstruction"/>
-</p>
-
-<p align="center"><i>From cross-medium dynamics to inspection and reconstruction—one physics contract, multiple simulation backends.</i></p>
-
-> NezhaSim2 is under active development. This repository remains the ROS 1 /
-> Gazebo 11 NezhaSim workspace.
 
 ## What's included
 
