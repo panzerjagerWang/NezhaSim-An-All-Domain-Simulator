@@ -23,6 +23,16 @@
 | [`nezha_gazebo`](src/nezha_sim/nezha_gazebo/) | Gazebo worlds, launch files, models, and experiment utilities. |
 | [`nezha_plugins`](src/nezha_sim/nezha_plugins/) | Hydrodynamics, wave, transmedia drag, motor, telemetry, terrain, and MAVLink plugins. |
 
+## Documentation website
+
+The complete documentation is available on
+[GitHub Pages](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/):
+[Overview](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/),
+[Installation](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/installation.html),
+[Tutorials](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/tutorials.html),
+[Architecture](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/architecture.html), and
+[Robots & Worlds](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/robots.html).
+
 Third-party simulators live under `src/nezha_sim/third_party/`. The ROS Noetic
 UUV port is vendored because it contains compatibility changes; the remaining
 upstream repositories are pinned as Git submodules. The matching revisions are
