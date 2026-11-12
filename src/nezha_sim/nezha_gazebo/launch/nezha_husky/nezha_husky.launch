@@ -8,6 +8,8 @@
 <launch>
   <!-- ==================== 基本参数配置 ==================== -->
   <arg name="mav_name" default="nezha_husky"/>
+  <!-- legacy: hydrodynamics stack of the Scenario A runs in Fig. 9 (see data/fig9_scenarioA/README.md) -->
+  <arg name="hydro_model" default="unified"/>
   <arg name="world_name" default="nezha_lake"/>
   <arg name="robot_namespace" default="$(arg mav_name)"/>
   
@@ -84,7 +86,7 @@
     <!-- ==================== 机器人描述 ==================== -->
     <param name="robot_description" 
            command="$(find xacro)/xacro '$(find nezha_description)/$(arg mav_name)/$(arg mav_name)_base.xacro' 
-                    robot_namespace:=$(arg robot_namespace)" />
+                    robot_namespace:=$(arg robot_namespace) hydro_model:=$(arg hydro_model)" />
 
     <!-- ==================== 状态发布器 ==================== -->
     <node name="robot_state_publisher" pkg="robot_state_publisher" type="robot_state_publisher"/>

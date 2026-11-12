@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-XX-F Scenario-C BASELINE recorder  (UUV_simulator + RotorS, no NSE / no TR)
+Nezha-F Scenario-C BASELINE recorder  (UUV_simulator + RotorS, no NSE / no TR)
 ===========================================================================
-Comparison baseline for Test Scenario C of the paper (XX-F HAUV water-to-air
+Comparison baseline for Test Scenario C of the paper (Nezha-F HAUV water-to-air
 transition trajectory tracking). It flies the SAME water-to-air waypoint path
 as the original `flight_controllerv3.py`, under the SAME wave field, but on the
 ``nezha_f_bl`` robot whose physics come from the *upstream* engines:
@@ -52,7 +52,7 @@ from gazebo_msgs.msg import ModelState
 NS = "nezha_f_bl"
 Z_OFFSET = 0.5                  # same +0.5 m trajectory offset as flight_controllerv3
 MAX_RECORDS = 100              # samples per epoch (first + 98 + last)
-MAX_SPEED = 5.0               # original pacing (matches the reference/XXSim time base)
+MAX_SPEED = 5.0               # original pacing (matches the reference/NezhaSim time base)
 MIN_SEG_T = 0.3
 END_HOLD_S = 12.0             # hold the final waypoint so the vehicle settles at target alt
 

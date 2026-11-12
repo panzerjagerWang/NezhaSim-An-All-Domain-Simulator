@@ -6,6 +6,8 @@
 -->
 <launch>
   <arg name="mav_name" default="nezha_husky"/>
+  <!-- legacy: hydrodynamics stack of the Scenario A runs in Fig. 9 (see data/fig9_scenarioA/README.md) -->
+  <arg name="hydro_model" default="unified"/>
   <arg name="world_name" default="nezha_husky_test"/>
   <arg name="enable_logging" default="false" />
   <arg name="enable_ground_truth" default="true" />
@@ -85,6 +87,7 @@
       <arg name="enable_logging" value="$(arg enable_logging)" />
       <arg name="enable_ground_truth" value="$(arg enable_ground_truth)" />
       <arg name="log_file" value="$(arg log_file)"/>
+      <arg name="hydro_model" value="$(arg hydro_model)"/>
     </include>
     
     <node name="lee_position_controller_node" pkg="rotors_control" type="lee_position_controller_node" output="screen">

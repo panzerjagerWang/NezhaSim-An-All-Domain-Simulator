@@ -1,5 +1,5 @@
 #!/bin/bash
-# Robust XX-F baseline run: clean -> launch gazebo (detached) -> run the recorder
+# Robust Nezha-F baseline run: clean -> launch gazebo (detached) -> run the recorder
 # for N epochs, writing outputs directly into the figure baseline folder.
 set -u
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)

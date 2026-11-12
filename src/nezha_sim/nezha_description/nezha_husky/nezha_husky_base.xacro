@@ -10,6 +10,10 @@
 
   <xacro:arg name="namespace" default="nezha_husky"/>
   <xacro:property name="namespace" value="$(arg namespace)" />
+  <!-- unified: submergence-gated unified plugin (default).
+       legacy: surface plugin, Fossen plugin and phase switch with the Table II coefficients,
+       the stack that recorded the Scenario A runs of Fig. 9. -->
+  <xacro:arg name="hydro_model" default="unified"/>
   
   <xacro:arg name="imu_xyz"     default="$(optenv HUSKY_IMU_XYZ 0.19 0 0.149)"/>
   <xacro:arg name="imu_rpy"     default="$(optenv HUSKY_IMU_RPY 0 -1.5708 3.1416)"/>

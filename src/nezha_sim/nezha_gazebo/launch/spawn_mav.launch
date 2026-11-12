@@ -24,6 +24,8 @@
        so the default here is false. Do NOT flip this back to true or every
        non-HITL launch will silently activate the PX4 HITL plugin path. -->
   <arg name="enable_mavlink_interface" default="false"/>
+  <!-- Nezha-Husky only: legacy loads the hydrodynamics stack of the Scenario A runs; other models ignore it. -->
+  <arg name="hydro_model" default="unified"/>
 
   <!-- send the robot XML to param server -->
   <param name="robot_description" command="
@@ -34,7 +36,8 @@
     log_file:=$(arg log_file)
     wait_to_record_bag:=$(arg wait_to_record_bag)
     mav_name:=$(arg mav_name)
-    namespace:=$(arg namespace)"
+    namespace:=$(arg namespace)
+    hydro_model:=$(arg hydro_model)"
   />
   <param name="tf_prefix" type="string" value="$(arg tf_prefix)" />
 

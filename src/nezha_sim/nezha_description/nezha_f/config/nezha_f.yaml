@@ -5,7 +5,7 @@
 # State Key Laboratory of Submarine Geoscience
 #
 # Iris vehicle parameters
-mass: 0.3
+mass: 2.0
 inertia: {xx: 0.002678, xy: 0.0, xz: 0, yy: 0.002678, yz: 0.0, zz: 0.001983}
 
 # angle should be expressed in rad

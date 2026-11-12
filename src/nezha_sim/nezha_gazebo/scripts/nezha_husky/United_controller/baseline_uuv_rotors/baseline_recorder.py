@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-XX-Husky Scenario-A BASELINE recorder  (UUV_simulator + RotorS)
+Nezha-Husky Scenario-A BASELINE recorder  (UUV_simulator + RotorS)
 ================================================================
 This is the comparison baseline for Test Scenario A of the paper. It runs
-the SAME land -> water -> air mission as the XXSim controller, but on the
+the SAME land -> water -> air mission as the NezhaSim controller, but on the
 ``nezha_husky_bl`` robot, whose physics come from the *upstream* engines:
 
   * Underwater  : genuine UUV_simulator hydrodynamics plugin
@@ -16,9 +16,9 @@ the SAME land -> water -> air mission as the XXSim controller, but on the
                   rotors spin (hover command), exactly as requested.
 
 The whole experiment uses the SAME wave field (``nezha_ocean_waves``) as the
-XXSim run, so any wrench difference isolates the simulator core.
+NezhaSim run, so any wrench difference isolates the simulator core.
 
-For every trial we record, in the same column layout as the XXSim controller's
+For every trial we record, in the same column layout as the NezhaSim controller's
 ``trajectory_data_with_forces_<ts>.csv``:
     timestamp,x,y,z,vx,vy,vz,roll,pitch,yaw,
     buoyancy_*(=UUV restoring), damping_*(=UUV damping),

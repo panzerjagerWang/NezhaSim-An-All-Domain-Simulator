@@ -2,8 +2,8 @@
 
 This folder is the documented home of the **transmedium-resistance** drag model
 used during air ⇄ water crossings. It stores the fitted model, the authoritative
-reference predictor, the held-out accuracy reports, and a script to re-verify the
-model against the experimental data.
+reference predictor, and a script to re-verify the model against the
+experimental data.
 
 ## What the model is
 
@@ -39,7 +39,6 @@ Each `Water_*.json` holds a **piecewise** model: a `boundary_on_z_over_l` plus
 | `Water_above.json` | C_TR model for the **above-water** regime. |
 | `CTR_predict.py`   | Authoritative runtime reference predictor (the C++ `Eval()` mirrors this exactly). |
 | `verify_tr_model.py` | Re-scores a model JSON against a ground-truth CSV (`z_over_l,velocity,CTR`). |
-| `reports/*_summary.md`, `reports/*_metrics.csv` | Held-out accuracy reports (4-model comparison). |
 
 > **Runtime copy.** At runtime the plugin loads these JSONs from
 > `nezha_plugins/Settings/Transmeida_liftdrag_force/`. The copies here are
@@ -65,11 +64,9 @@ experimental ground truth (`merged_rows.csv`):
 | Water entry | 5850 | 0.024 – 0.646 | **0.0184** | 2.96 % | 0.064 |
 | Water exit  | 229  | 0.041 – 0.452 | **0.0148** | 3.60 % | 0.062 |
 
-These match the held-out **Full LEAP** figures in `reports/` (entry random-split
-RMSE 0.019 / extrapolation 0.015; exit random 0.020 / extrapolation 0.031),
-confirming the simulator runs the genuine fitted model — and that it
-**extrapolates** well (the degree-4 polynomial surrogate is ~15× worse on the
-extrapolation split).
+Held-out errors of the same model form, refit on each split over five seeds,
+are in `leap/table_iv/sweep/sweep_metrics.csv` at the repository root (rows
+`TR`).
 
 **Real-time:** the model is a closed-form O(1) expression (~0.06 ms per curve,
 ~58 µs per query). The alternative RBF interpolation is ~44 ms/query (≈500×

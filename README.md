@@ -29,6 +29,13 @@
 | [`nezha_gazebo`](src/nezha_sim/nezha_gazebo/) | Gazebo worlds, launch files, models, and experiment utilities. |
 | [`nezha_plugins`](src/nezha_sim/nezha_plugins/) | Hydrodynamics, wave, transmedia drag, motor, telemetry, terrain, and MAVLink plugins. |
 
+| Folder | Purpose |
+|---|---|
+| [`leap`](leap/) | LEAP fitting scripts with the NSE and TR training data. |
+| [`data`](data/) | Recorded data of Figs. 9 to 11. |
+| [`experiments/psc_closed_loop`](experiments/psc_closed_loop/) | Closed-loop PSC and PSC-RS test and per-step timing of Sec. VII-B. |
+| [`experiments/scenario_c`](experiments/scenario_c/) | Closed-loop tracking of the Nezha-F field record in Sec. VI-C and Fig. 11. |
+
 ## Documentation website
 
 The complete documentation is available on
@@ -58,12 +65,20 @@ also recorded in [`nezha.repos`](src/nezha_sim/nezha.repos).
 git clone --recurse-submodules \
   https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws
 
-# Resolve dependencies and build
+# Resolve dependencies and build.
+# ROS Noetic is end-of-life, so rosdep needs --include-eol-distros.
 cd ~/nezha_ws
-rosdep install --from-paths src --ignore-src -r -y
+rosdep update --include-eol-distros
+rosdep install --from-paths src --ignore-src -r -y --rosdistro noetic
+# The two hardware-in-the-loop packages are not needed for simulation.
+catkin init
+catkin config --skiplist rotors_hil_interface mavlink_sitl_gazebo
 catkin build
 source devel/setup.bash
 ```
+
+For hardware-in-the-loop use, remove `mavlink_sitl_gazebo` from the skiplist and
+install `python3-jinja2` first.
 
 ## Quick start
 
@@ -76,6 +91,21 @@ Then follow the checked, command-level
 [`NezhaSim tutorials`](src/nezha_sim/docs/tutorials/). The tutorial now
 distinguishes scene launchers from controllers and uses the actual topics and
 services exposed by this source tree.
+
+## Reproducing the experiments
+
+These are the experiments of the paper *NezhaSim: Bridging Air, Land and Ocean
+Through ROS* (IEEE Transactions on Automation Science and Engineering).
+
+| Result | How to reproduce |
+|---|---|
+| LEAP fits and the ablation of Sec. VII-A, Table IV | `leap/README.md` |
+| Runs of Scenario A in Fig. 9 | Run logs, run counts, resampling and the `hydro_model:=legacy` launch argument in `data/fig9_scenarioA/README.md` |
+| Recorded data of Figs. 10 and 11 | `data/fig10_scenarioB` and `data/fig11_scenarioC` |
+| Runs of Scenario C in Fig. 11 | `experiments/scenario_c/README.md` |
+| Closed-loop PSC and PSC-RS test, per-step cost | `experiments/psc_closed_loop/README.md` |
+
+The analysis scripts need Python 3 with numpy, scipy, pandas and sympy.
 
 ## License and maintainer
 

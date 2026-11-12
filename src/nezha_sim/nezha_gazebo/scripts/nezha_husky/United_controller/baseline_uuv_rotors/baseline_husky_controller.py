@@ -181,7 +181,7 @@ class GlobalDataRecorder:
 
     def initialize_force_services(self):
         """BASELINE: subscribe to the genuine UUV_simulator plugin debug-force
-        topics (no XXSim get_hydrodynamics_forces / get_phase_sample services,
+        topics (no NezhaSim get_hydrodynamics_forces / get_phase_sample services,
         no PSC/TR/NSE)."""
         from geometry_msgs.msg import WrenchStamped
         from std_msgs.msg import Bool

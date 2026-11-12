@@ -97,10 +97,19 @@
         <rotorVelocitySlowdownSim>${rotor_velocity_slowdown_sim}</rotorVelocitySlowdownSim>
       </plugin>
     </gazebo>
-    <!-- ✅ Removed the ungated Fossen plugin (libnezha_underwater_plugin.so):
-         it applied full hydrodynamic damping + buoyancy regardless of medium
-         (residual drag in the air). Hydrodynamics are now handled by the
-         submergence-gated unified plugin in apply_nezha_plugins. -->
+    <!-- The Fossen plugin (libnezha_underwater_plugin.so) applies damping and buoyancy in every medium,
+         so by default the submergence-gated unified plugin in apply_nezha_plugins replaces it.
+         hydro_model:=legacy restores it, as used for the Scenario A runs of Fig. 9. -->
+    <xacro:if value="${'$(arg hydro_model)' == 'legacy'}">
+      <gazebo>
+        <plugin name="nezha_underwater_plugin" filename="libnezha_underwater_plugin.so">
+          <fluid_density>1028.0</fluid_density>
+          <flow_velocity_topic>hydrodynamics/current_velocity</flow_velocity_topic>
+          <debug>${debug}</debug>
+          <xacro:nezha_underwater_model namespace="${namespace}"/>
+        </plugin>
+      </gazebo>
+    </xacro:if>
   </xacro:macro>
 <xacro:macro name="nezha_underwater_model" params="namespace">
         <link name="${namespace}/base_link">
@@ -349,6 +358,27 @@
        - 被 Phase Switch 控制
        - 负责浮力、波浪力、阻力等
        ======================================== -->
+  <xacro:if value="${'$(arg hydro_model)' == 'legacy'}">
+  <!-- Stack of the Scenario A runs: surface plugin and Fossen plugin, switched by the phase switch. -->
+  <xacro:hydrodynamics_plugin
+    wave_model="${wave_model}"
+    debug="${debug}"
+    robot_volume="${volume}"
+    buoyancy_scale="${buoyancy_scale}"
+    force_scale_factor="${force_scale_factor}"
+    water_patch_length="1.0"
+    water_patch_width="1.0"/>
+  <xacro:phase_switch_plugin
+    namespace="${namespace}"
+    target_link="${target_link}"
+    update_rate="50.0"
+    transition_frames="5"
+    surface_plugin_name="hydrodynamics"
+    underwater_plugin_name="uuv_plugin"
+    surface_plugin_file="libnezha_surface_plugin.so"
+    underwater_plugin_file="libnezha_underwater_plugin.so"/>
+  </xacro:if>
+  <xacro:unless value="${'$(arg hydro_model)' == 'legacy'}">
   <!-- ✅ Unified Hydrodynamics Plugin: single gated engine that replaces the
        surface + ungated Fossen + phase_switch stack. No hydro force in air. -->
   <xacro:unified_hydrodynamics_plugin
@@ -356,6 +386,7 @@
       link_name="${target_link}"
       wave_model="${wave_model}"
       volume="${volume}"/>
+  </xacro:unless>
   
   <!-- ========================================
        4️⃣ Wave Probe Plugin (波浪探测)

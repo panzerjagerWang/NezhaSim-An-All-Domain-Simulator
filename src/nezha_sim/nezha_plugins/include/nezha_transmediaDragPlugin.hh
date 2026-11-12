@@ -14,6 +14,7 @@
 
 #include <ros/ros.h>
 #include <geometry_msgs/Vector3Stamped.h>
+#include "nezha_step_profiler.hh"
 #include <std_msgs/String.h>
 
 #include <array>
@@ -83,6 +84,8 @@ bool QueryPhaseSample(double x, double y, double& outSurfaceZ, double& outZOverL
   gazebo::common::Time  lastUpdateTime;
 
   ignition::math::Vector3d lastForce{0,0,0};
+  nezha::StepProfiler stepProfiler{"tr_drag"};
+  nezha::StepProfiler leapProfiler{"tr_leap_query"};
 
 
 double characteristicLen{1.0};  

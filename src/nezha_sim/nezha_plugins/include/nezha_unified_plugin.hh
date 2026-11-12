@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cmath> // For std::pow, std::max
 #include <nezha_plugins/HydrodynamicsForces.h> 
+#include "nezha_step_profiler.hh"
 // asv engine types used as members below
 #include "nasv_physics.hh"                                  // asv::Hydrodynamics, asv::HydrodynamicsParameters
 #include "asv_wave_sim_gazebo_plugins/CGALTypes.hh"         // asv::Mesh, asv::Point3, asv::Vector3
@@ -130,6 +131,9 @@ namespace nezha {
 double bodyHalfHeight = 0.1;
 double heaveDamping = 8.0;    // linear vertical damping (under-critical, ~0.4*c_crit)
 double heaveDragQuad = 8.0;   // quadratic vertical entry drag (0.5*rho*Cd*A lumped)
+// PSC-RS ablation: apply the mesh or the Fossen model one at a time instead of blending.
+bool rigidSwitching = false;
+nezha::StepProfiler stepProfiler{"psc_unified"};
 
 // Wave-kinematics coupling (orbital following + surface-slope alignment).
 double waveDecayLength = 1.0; // depth [m] over which wave orbital motion decays

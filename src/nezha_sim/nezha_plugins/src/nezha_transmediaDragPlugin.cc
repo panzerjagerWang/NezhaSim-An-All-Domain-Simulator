@@ -55,7 +55,16 @@ static int prec(const std::string& o){
   }; return m; }
   struct Node{ enum K{NUM,VAR,UN,BIN}k; double val; std::string s; F1 f; Node*a=nullptr,*b=nullptr; Node(K k,double v=0):k(k),val(v),f(nullptr){} };
   struct AST{
-    Node*root=nullptr; ~AST(){destroy(root);} static void destroy(Node*n){if(!n)return;destroy(n->a);destroy(n->b);delete n;}
+    Node*root=nullptr;
+    // The tree is owned through a raw pointer, so an AST must not be copied:
+    // a shallow copy leaves two owners and the nodes are freed while still in
+    // use. Moving hands the tree over and empties the source.
+    AST() = default;
+    AST(const AST&) = delete;
+    AST& operator=(const AST&) = delete;
+    AST(AST&& o) noexcept : root(o.root) { o.root = nullptr; }
+    AST& operator=(AST&& o) noexcept { if (this != &o) { destroy(root); root = o.root; o.root = nullptr; } return *this; }
+    ~AST(){destroy(root);} static void destroy(Node*n){if(!n)return;destroy(n->a);destroy(n->b);delete n;}
     double eval(double x0,double x1)const{
 std::function<double(Node*)> E = [&](Node* n)->double {
   if (!n) return 0.0;
@@ -378,6 +387,7 @@ return false;
 
 
 void TransMediaDragPlugin::OnUpdate() {
+  nezha::ScopedStepTimer stepTimer(stepProfiler);
   if (!baseLink) {
     return;
   }
@@ -426,7 +436,10 @@ if (phase == Phase::None) {
   double predict_scalar = 0.0;
   double dragMag = 0.0;
   if (m && m->kind != DragModel::Kind::None && vAbs > 1e-4) {
-    predict_scalar = std::max(0.0, m->Eval(vAbs, zOverL));
+    {
+      nezha::ScopedStepTimer leapTimer(leapProfiler);
+      predict_scalar = std::max(0.0, m->Eval(vAbs, zOverL));
+    }
     dragMag = ctrScale * predict_scalar;
     if (dragMag > 0.0) {
       const ignition::math::Vector3d dir = -vel.Normalized();

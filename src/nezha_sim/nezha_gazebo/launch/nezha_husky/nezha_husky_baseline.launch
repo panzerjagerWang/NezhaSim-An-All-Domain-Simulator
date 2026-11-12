@@ -1,6 +1,6 @@
 <!--
-  XX-Husky BASELINE launch (Scenario A comparison).
-  Same world / wave field as the XXSim run, but the robot is the
+  Nezha-Husky BASELINE launch (Scenario A comparison).
+  Same world / wave field as the NezhaSim run, but the robot is the
   nezha_husky_bl description: hydrodynamics come from the genuine
   UUV_simulator plugin (ungated, no PSC) and the rotors use the genuine
   RotorS motor model (no NSE). Used for the UUV_simulator + RotorS

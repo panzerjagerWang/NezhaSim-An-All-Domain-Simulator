@@ -457,6 +457,12 @@ link_plugin_common(nezha_unified_plugin nezha_dynamics asv_wave_core CGAL::CGAL)
 # Ensure ROS messages are generated before building
 add_dependencies(nezha_unified_plugin ${catkin_EXPORTED_TARGETS})
 
+# 5.11 Per-step wall-clock timer (world plugin, active only with NEZHA_PROFILE_DIR)
+add_library(nezha_step_timer_plugin SHARED
+  src/nezha_stepTimerPlugin.cc
+)
+link_plugin_common(nezha_step_timer_plugin)
+
 install(TARGETS nezha_wave_probe_plugin
                 nezha_transmedia_drag_plugin
                 nezha_buoyant_object_plugin

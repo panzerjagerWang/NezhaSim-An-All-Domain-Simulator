@@ -23,6 +23,7 @@
 #define ROTORS_GAZEBO_PLUGINS_MOTOR_MODELS_H
 
 // SYSTEM
+#include "nezha_step_profiler.hh"
 #include <stdio.h>
 #include <limits>          // <—— 新增，std::numeric_limits 需要
 #include <std_msgs/Bool.h>
@@ -135,6 +136,8 @@ class GazeboMotorModel : public MotorModel, public ModelPlugin {
   virtual void UpdateForcesAndMoments();
   virtual void Load(physics::ModelPtr _model, sdf::ElementPtr _sdf);
   virtual void OnUpdate(const common::UpdateInfo & /*_info*/);
+  nezha::StepProfiler step_profiler_{"nse_motor"};
+  nezha::StepProfiler leap_profiler_{"nse_leap_query"};
 
  private:
   /// \brief    Flag that is set to true once CreatePubsAndSubs() is called, used

@@ -229,6 +229,14 @@ void NezhaUnifiedHydrodynamicsPlugin::Load(physics::ModelPtr _model, sdf::Elemen
         this->heaveDragQuad = _sdf->Get<double>("heave_drag_quad");
     }
 
+    // 2f'. Rigid switching (PSC-RS ablation baseline). Default false = PSC.
+    if (_sdf->HasElement("rigid_switching")) {
+        this->rigidSwitching = _sdf->Get<bool>("rigid_switching");
+    }
+    if (this->rigidSwitching) {
+        gzmsg << "[NezhaUnified] rigid_switching=true (PSC-RS baseline)" << std::endl;
+    }
+
     // 2g. Wave-kinematics coupling.
     //   wave_decay_length: depth over which the wave's orbital water motion
     //     decays (e^(-depth/L)); makes the underwater following fade with depth.
@@ -433,6 +441,7 @@ void NezhaUnifiedHydrodynamicsPlugin::CreateCollisionMeshes() {
 // MAIN LOOP (OnUpdate)
 // ==========================================================================
 void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) {
+    nezha::ScopedStepTimer stepTimer(this->stepProfiler);
     if (!this->targetLink) return;
 
     ignition::math::Pose3d pose = this->targetLink->WorldPose();
@@ -548,6 +557,17 @@ void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) 
 
     double immersionRatio = w;  // reuse as the reported submersion ratio
 
+    // Composition weights of the surface (mesh) and underwater (Fossen) models.
+    // PSC blends them continuously with w. PSC-RS applies one model at a time
+    // according to the sign of the local submergence d of the body center.
+    double wMesh = 1.0 - w;
+    double wFossen = w;
+    if (this->rigidSwitching) {
+        const bool below = (d >= 0.0);
+        wFossen = below ? 1.0 : 0.0;
+        wMesh = below ? 0.0 : 1.0;
+    }
+
     // Phase label (telemetry).
     if (w <= 0.0)      this->phaseManager.currentPhase = PhaseState::ABOVE;
     else if (w >= 1.0) this->phaseManager.currentPhase = PhaseState::BELOW;
@@ -625,7 +645,7 @@ void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) 
     ignition::math::Vector3d meshWaveDrag(0, 0, 0);
 
     if (this->wavefield && this->wavefieldSampler && !this->hydrodynamics.empty()
-        && w > 0.0 && w < 1.0) {
+        && w > 0.0 && w < 1.0 && wMesh > 0.0) {
         ignition::math::Pose3d linkCoMPose = this->targetLink->WorldCoGPose();
 
         this->wavefieldSampler->ApplyPose(pose);
@@ -686,7 +706,7 @@ void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) 
         ignition::math::Vector3d buoy = meshBuoyancy;
         if (buoy.Z() < 0.0) buoy.Z() = 0.0;   // buoyancy alone never pulls down
 
-        double mw = (1.0 - w);
+        double mw = wMesh;
         meshForce  = (buoy + meshDrag) * mw;
         meshTorque *= mw;
     }
@@ -700,12 +720,12 @@ void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) 
     ignition::math::Vector3d dampingForce(0, 0, 0);     // BODY frame
     ignition::math::Vector3d dampingTorque(0, 0, 0);    // BODY frame
 
-    if (w > 0.0) {
+    if (wFossen > 0.0) {
         const double rho = 1028.0;
         const double g   = 9.81;
 
         // Fossen buoyancy: full displaced-volume buoyancy when fully submerged.
-        fossenBuoyancy.Z() = this->fossen.volume * rho * g * w;
+        fossenBuoyancy.Z() = this->fossen.volume * rho * g * wFossen;
 
         // Fossen damping (linear + quadratic), body frame, scaled by w.
         //
@@ -727,7 +747,7 @@ void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) 
         for (int i = 0; i < 6; ++i) {
             damping(i) -= this->fossen.DNonLin(i, i) * std::abs(vel(i)) * vel(i);
         }
-        damping *= w;
+        damping *= wFossen;
 
         dampingForce.Set(damping(0), damping(1), damping(2));
         dampingTorque.Set(damping(3), damping(4), damping(5));
@@ -814,8 +834,8 @@ void NezhaUnifiedHydrodynamicsPlugin::OnUpdate(const common::UpdateInfo& _info) 
     // ----------------------------------------------------------------------
     // 5. Save for ROS telemetry.
     // ----------------------------------------------------------------------
-    this->lastBuoyancyForce   = meshBuoyancy * (1.0 - w) + fossenBuoyancy;
-    this->lastWaveForce       = meshWaveDrag * (1.0 - w);
+    this->lastBuoyancyForce   = meshBuoyancy * wMesh + fossenBuoyancy;
+    this->lastWaveForce       = meshWaveDrag * wMesh;
     this->lastDampingForce    = dampingForce;
     this->lastCoriolisForce   = dampingTorque;
     // Heave damping + quadratic entry drag (WORLD frame). Reported separately so a

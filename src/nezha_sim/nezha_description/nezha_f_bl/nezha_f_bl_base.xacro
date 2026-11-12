@@ -23,7 +23,7 @@
 <xacro:property name="blade_type" value="thin" /> <!-- [m] -->
 <xacro:property name="radius_rotor" value="0.1" /> <!-- [m] -->
 <xacro:property name="scale_rotor" value="1" /> <!-- [m] -->
-<xacro:property name="motor_constant" value="1.70e-05" /> <!-- [kg.m/s^2] BASELINE: raised from 8.55e-6. The genuine RotorS motor model delivers less effective thrust-per-omega than the XXSim NSE model the lee controller was tuned for, causing an altitude undershoot. This value gives stable flight with a small residual ~1 m sag; adding more thrust to fully close it destabilises the lee controller. -->
+<xacro:property name="motor_constant" value="8.54858e-06" /> <!-- [kg.m/s^2] -->
 <xacro:property name="moment_constant" value="0.016" /> <!-- [m] --> 
 <xacro:property name="time_constant_up" value="0.0125" /> <!-- [s] --> 
 <xacro:property name="time_constant_down" value="0.025" /> <!-- [s] --> 

@@ -1,0 +1,19 @@
+{
+ "arm": "psc_rs",
+ "runs": 30,
+ "steps": 495412,
+ "step_budget_us": 2000.0,
+ "leap_query_mean_us": 2.4602993807404556,
+ "nse_tr_mean_us": 429.1161804199219,
+ "nse_tr_p99_us": 1730.923828125,
+ "nse_tr_max_us": 14333.5107421875,
+ "psc_mean_us": 54.8996467590332,
+ "psc_p99_us": 1318.9654541015625,
+ "world_step_mean_us": 813.6195068359375,
+ "world_step_p99_us": 2619.324951171875,
+ "world_step_max_us": 599386.5,
+ "frac_steps_over_budget": 0.05698287485971273,
+ "world_step_p999_us": 3778.391357421875,
+ "steps_over_10ms": 3,
+ "nse_tr_p999_us": 2582.964111328125
+}

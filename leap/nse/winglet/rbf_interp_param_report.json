@@ -1,0 +1,9 @@
+{
+  "kernel": "thin_plate_spline",
+  "epsilon": 1.0,
+  "smoothing": 0.0001,
+  "train_ms": 156.91820002393797,
+  "single_ms": 0.25340000865980983,
+  "KT_sample": 1.2392822223530915,
+  "KQ_sample": 0.8835273300233117
+}

@@ -281,6 +281,7 @@ if (!jf.is_open()) {
 
 // This gets called by the world update start event.
 void GazeboMotorModel::OnUpdate(const common::UpdateInfo& _info) {
+  nezha::ScopedStepTimer step_timer(step_profiler_);
   /* === 0. 先用射线检测正下方命中物体名称 === */
   {
     ignition::math::Vector3d pos = link_->WorldPose().Pos();
@@ -574,6 +575,7 @@ double rpm_ratio = std::clamp(std::abs(real_motor_velocity) / max_rot_velocity_,
 // ---------- 取增益 (写入成员) ----------
 kt_gain_ = 1.0;  kq_gain_ = 1.0;
 if (use_sr_model_) {
+nezha::ScopedStepTimer leap_timer(leap_profiler_);
 kt_gain_ = srGain(kt_sr_, d_over_R, rpm_ratio, blade_radius_);
 kq_gain_ = srGain(kq_sr_, d_over_R, rpm_ratio, blade_radius_);
 

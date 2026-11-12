@@ -1,0 +1,9 @@
+{
+  "csv": "data\\merged_rows.csv",
+  "kernel": "thin_plate_spline",
+  "epsilon": 1.0,
+  "smoothing": 0.0001,
+  "train_ms": 1.5536999562755227,
+  "single_ms": 0.07350009400397539,
+  "CTR_sample": 0.45678464333378543
+}

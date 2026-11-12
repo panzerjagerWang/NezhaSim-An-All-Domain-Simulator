@@ -1,13 +1,13 @@
-# Scenario-C Baseline — XX-F (UUV_simulator + RotorS, no NSE / no TR)
+# Scenario-C Baseline — Nezha-F (UUV_simulator + RotorS, no NSE / no TR)
 
-Comparison **baseline for Test Scenario C** (XX-F HAUV, water-to-air transition
+Comparison **baseline for Test Scenario C** (Nezha-F HAUV, water-to-air transition
 **trajectory tracking**). It flies the same water-to-air waypoint path as the
 original `flight_controllerv3.py`, under the same wave field, but on the
 `nezha_f_bl` robot driven by the **upstream simulator cores** — and deliberately
-**without XXSim's Near-Surface-Effect (NSE) rotor model and without the
+**without NezhaSim's Near-Surface-Effect (NSE) rotor model and without the
 Transmedium-Resistance (TR) drag model**.
 
-| Aspect    | XXSim XX-F (the paper's method)             | This baseline                                   |
+| Aspect    | NezhaSim Nezha-F (the paper's method)             | This baseline                                   |
 |-----------|--------------------------------------------|-------------------------------------------------|
 | Hydro     | rewritten hydro + PSC + **TR** drag        | **genuine UUV_simulator** (Fossen), no PSC, **no TR** |
 | Rotors    | RotorS + **NSE** k_T/k_Q gains             | **genuine RotorS** motor model, **no NSE**      |
@@ -51,9 +51,7 @@ source devel/setup.bash
 rosrun nezha_gazebo baseline_f_recorder.py 10     # or: python3 baseline_f_recorder.py 10
 ```
 
-## Observed (smoke test)
-- Submerged buoyancy `restoring_z ≈ 10.0 N` = ρ·g·V (1028·9.81·0.001) ✓; rotors
-  spin (~770 rad/s real; `motor_speed` = value × `rotorVelocitySlowdownSim` 20).
-- Horizontal tracking is good (ends at the final waypoint x,y), but the **vertical
-  water-to-air transition degrades without NSE/TR** (altitude dips well below the
-  reference and the final height undershoots) — the intended baseline contrast.
+## Fig. 11
+
+The runs of Fig. 11 use one script for both arms, described in
+`experiments/scenario_c/README.md`. This folder keeps the recorder of the baseline robot.

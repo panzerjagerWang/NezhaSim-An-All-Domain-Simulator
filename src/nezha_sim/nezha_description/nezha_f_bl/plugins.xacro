@@ -102,7 +102,7 @@
          (upstream uuv_underwater_object_ros_plugin, Fossen model), with
          NO Phase Switch Console and NO Transmedium-Resistance (TR) drag
          model. Plain UUV-Simulator: a single infinite ocean half-space.
-         Fossen coefficients are kept identical to the XXSim XX-F
+         Fossen coefficients are kept identical to the NezhaSim Nezha-F
          (nezha_f) so only the engine differs.
          ============================================================ -->
     <gazebo>

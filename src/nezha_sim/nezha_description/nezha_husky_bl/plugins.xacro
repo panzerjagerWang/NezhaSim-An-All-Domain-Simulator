@@ -106,7 +106,7 @@
          handling) and exposes the buoyancy/damping/added-mass/coriolis
          wrench through the standard /debug/forces/<link>/* topics.
          Parameters match Table II of the paper (Hypothetical
-         Hydrodynamic Parameters of the XX-Husky).
+         Hydrodynamic Parameters of the Nezha-Husky).
          ============================================================ -->
     <gazebo>
       <plugin name="uuv_plugin" filename="libuuv_underwater_object_ros_plugin.so">
@@ -129,7 +129,7 @@
             <center_of_buoyancy>0 0 0.05</center_of_buoyancy>
 <hydrodynamic_model>
   <type>fossen</type>
-  <!-- SAME Fossen coefficients as the XXSim XX-Husky (nezha_husky1), so the only
+  <!-- SAME Fossen coefficients as the NezhaSim Nezha-Husky (nezha_husky1), so the only
        difference is the engine (genuine UUV_simulator, no PSC/TR/NSE), not the
        parameters. uuv_simulator sign convention => negated. -->
   <added_mass>

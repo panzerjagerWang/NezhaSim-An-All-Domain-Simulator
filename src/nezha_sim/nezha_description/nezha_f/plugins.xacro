@@ -119,7 +119,7 @@
             </box>
             <center_of_buoyancy>${cob}</center_of_buoyancy>
 <hydrodynamic_model>
-    <type>fossen</type>
+    <type>fossen</type><volume>${volume}</volume>
     
     <!-- ✅ 修正1: 去掉负号，质量必须为正 -->
     <added_mass>
@@ -230,7 +230,7 @@
     <force_scale_factor>0.5</force_scale_factor>
     
 <hydrodynamic_model>
-    <type>fossen</type>
+    <type>fossen</type><volume>${volume}</volume>
     
     <!-- ✅ 修正1: 去掉负号，质量必须为正 -->
     <added_mass>

@@ -10,6 +10,7 @@
   <xacro:arg name="debug" default="false"/>
   <xacro:arg name="mode" default="_mini"/>
   <xacro:arg name="namespace" default="nezha_mini"/>
+  <xacro:arg name="rigid_switching" default="false"/>
 
   <xacro:property name="namespace" value="$(arg namespace)"/>
   <xacro:arg name="inertial_reference_frame" default="world"/>
@@ -45,6 +46,7 @@
         <robotNamespace>${namespace}</robotNamespace>
         <link_name>${link_name}</link_name>
         <wave_model>${wave_model}</wave_model>
+        <rigid_switching>$(arg rigid_switching)</rigid_switching>
 
         <!-- ✅ Top-level params read by the plugin Load():
              these MUST sit at the plugin top level, NOT inside
