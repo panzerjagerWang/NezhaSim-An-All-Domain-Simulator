@@ -1,4 +1,4 @@
-# Closed-loop PSC and PSC-RS test and per-step cost (Sec. VII-B and IV-B)
+# Closed-loop PSC and PSC-RS test and per-step cost (Sec. VI-B and III-B)
 
 The test flies Nezha-Mini through one mission under PSC and under PSC-RS. Both arms
 use the same world, wave field (0.1 m amplitude, 4 s period), NSE and TR plugins,
@@ -26,7 +26,18 @@ and never diverges (finite state, speed below 10 m/s, tilt below 60 deg).
 | `analyze_timing.py` | Per-physics-step cost from the plugin timers |
 | `rerun_crashed.py` | Repeats runs that ended in a gzserver crash, with the same seed |
 | `make_world.py` | Writes `nezha_lake_waves.world` with the wave field and the step timer |
-| `results/` | Per-run metadata, metrics and logs, summary and timing files |
+| `results/` | Per-run records (below), `crashes.json`, `summary.json` and the timing files |
+
+Each run folder `results/psc_<seed>` or `results/psc_rs_<seed>` holds:
+
+| File | Content |
+|---|---|
+| `meta.json` | Seed, initial state, command time, status and real-time factor |
+| `odom.csv.xz` | Full-rate odometry as recorded (time, position, velocity, quaternion), xz-compressed |
+| `odom_50hz.csv` | The same odometry resampled to 50 Hz, for quick plotting |
+| `mt.csv` | Vertical force components read from MT |
+| `launch.log.xz` | gzserver log, used for the out-of-range veto check, xz-compressed |
+| `profile/` | Per-call durations of the plugin timers (float32, microseconds) |
 
 The launch file is `src/nezha_sim/nezha_gazebo/launch/nezha_mini_psc_trial.launch`.
 
@@ -47,6 +58,15 @@ bash experiments/psc_closed_loop/run_batch.sh results
 python3 experiments/psc_closed_loop/analyze_batch.py results summary.json
 python3 experiments/psc_closed_loop/analyze_timing.py results psc timing_psc.json
 ```
+
+`analyze_batch.py` reads `odom.csv` and `launch.log` of each run, or their `.xz`
+copies, so the stored runs can be scored again without the simulator:
+
+```bash
+python3 experiments/psc_closed_loop/analyze_batch.py experiments/psc_closed_loop/results summary.json
+```
+
+This reproduces `results/summary.json` and Table V of the paper.
 
 The runs in `results/` use the TR plugin after the fix of its residual
 expression in `src/nezha_sim/nezha_plugins/src/nezha_transmediaDragPlugin.cc`.

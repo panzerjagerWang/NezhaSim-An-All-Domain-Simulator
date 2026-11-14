@@ -1,4 +1,4 @@
-# Scenario C: closed-loop tracking of the Nezha-F field record (Sec. VI-C, Fig. 11)
+# Scenario C: closed-loop tracking of the Nezha-F field record (Sec. V-C, Fig. 11)
 
 One script drives both arms, so NezhaSim (`nezha_f`) and the UUV Simulator and RotorS baseline
 (`nezha_f_bl`) share every part of the protocol below. They differ only in the plugins:

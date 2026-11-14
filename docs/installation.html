@@ -1,131 +1,127 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Installation — NezhaSim</title>
-<meta name="description" content="Build NezhaSim from source on Ubuntu 20.04 + ROS Noetic + Gazebo 11.">
-<link rel="icon" href="assets/img/logo.gif">
+<title>Installation · NezhaSim</title>
+<meta name="description" content="NezhaSim: an open-source ROS / Gazebo simulator for robots that cross air, surface, underwater and ground.">
+<meta property="og:title" content="Installation · NezhaSim">
+<meta property="og:description" content="NezhaSim: an open-source ROS / Gazebo simulator for robots that cross air, surface, underwater and ground.">
+<meta property="og:image" content="assets/img/poster.webp">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,650&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/site.js" defer></script>
 </head>
 <body>
-<div class="baseline-banner">
-  <span class="pill">Current source</span>
-  This guide installs the repository's ROS&nbsp;Noetic / Gazebo&nbsp;11 workspace and its pinned submodules.
-</div>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">NezhaSim<span>.</span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Menu">Menu</button>
+    <nav class="nav"><a href="index.html">Home</a><a href="installation.html" aria-current="page">Install</a><a href="tutorials.html">Tutorials</a><a href="architecture.html">Architecture</a><a href="robots.html">Robots &amp; Worlds</a><a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator">GitHub ↗</a></nav>
+  </div>
+</header>
+<main>
 
+<section class="page-head"><div class="wrap">
+  <div class="eyebrow">Getting started</div>
+  <h1>Installation</h1>
+  <p class="lead">NezhaSim ships three ROS packages (<code>nezha_description</code>,
+  <code>nezha_gazebo</code>, <code>nezha_plugins</code>), a vendored ROS Noetic port of the UUV
+  Simulator and pinned Git submodules for the other upstream simulators.</p>
+  <div class="toc"><a href="#req">Requirements</a><a href="#s1">1 · Prerequisites</a><a href="#s2">2 · Clone</a><a href="#s3">3 · Build</a><a href="#s4">4 · Verify</a><a href="#layout">Package layout</a></div>
+</div></section>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <a class="nav-brand" href="index.html"><img src="assets/img/logo.gif" alt="NezhaSim logo"><span>Nezha<b>Sim</b></span></a>
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="installation.html" class="active">Install</a>
+<section class="block"><div class="wrap">
+  <h2 id="req">Requirements</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Component</th><th>Version</th><th>Notes</th></tr>
+    <tr><td>OS</td><td>Ubuntu 20.04 LTS</td><td>Focal Fossa</td></tr>
+    <tr><td>ROS</td><td>Noetic</td><td><code>ros-noetic-desktop-full</code></td></tr>
+    <tr><td>Gazebo</td><td>11</td><td>through <code>gazebo_ros</code></td></tr>
+    <tr><td>Build tools</td><td><code>catkin_tools</code>, <code>rosdep</code>, <code>vcstool</code> (optional)</td><td>catkin build workflow</td></tr>
+    <tr><td>GPU</td><td>optional</td><td>physics runs on the CPU</td></tr>
+  </table></div>
+  <div class="note"><b>ROS 1.</b> NezhaSim targets ROS Noetic and Gazebo Classic, both end-of-life.
+  rosdep therefore needs <code>--include-eol-distros</code>. A ROS 2 / PX4 version is planned.</div>
+
+  <h2 id="s1" style="margin-top:44px">1 · Install the prerequisites</h2>
+  <pre><span class="c"># ROS Noetic (skip if installed)</span>
+sudo apt update
+sudo apt install ros-noetic-desktop-full
+<span class="c"># Build and dependency tools</span>
+sudo apt install python3-catkin-tools python3-rosdep python3-vcstool
+sudo rosdep init</pre>
+
+  <h2 id="s2" style="margin-top:44px">2 · Clone the workspace and its submodules</h2>
+  <pre>git clone --recurse-submodules \
+  https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws
+<span class="c"># already cloned without submodules?</span>
+cd ~/nezha_ws &amp;&amp; git submodule update --init --recursive</pre>
+  <p><code>src/nezha_sim/nezha.repos</code> records the same upstream revisions for audits or for
+  workspace layouts that use vcstool.</p>
+
+  <h2 id="s3" style="margin-top:44px">3 · Resolve dependencies and build</h2>
+  <pre>cd ~/nezha_ws
+rosdep update --include-eol-distros
+rosdep install --from-paths src --ignore-src -r -y --rosdistro noetic
+catkin init
+<span class="c"># the two hardware-in-the-loop packages are not needed for simulation</span>
+catkin config --skiplist rotors_hil_interface mavlink_sitl_gazebo
+catkin build
+source devel/setup.bash</pre>
+  <div class="note"><b>Hardware in the loop.</b> Remove <code>mavlink_sitl_gazebo</code> from the
+  skiplist and install <code>python3-jinja2</code> first. The PX4 HIL workflow is described in
+  <a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/blob/main/src/nezha_sim/HITL_SETUP.md"><code>HITL_SETUP.md</code></a>.</div>
+  <p>Add <code>source ~/nezha_ws/devel/setup.bash</code> to <code>~/.bashrc</code> so new shells see the workspace.</p>
+
+  <h2 id="s4" style="margin-top:44px">4 · Verify</h2>
+  <p>Gazebo opens with Nezha-Mini in the lake; the listings in a second sourced terminal confirm the plugins loaded.</p>
+  <pre>roslaunch nezha_gazebo nezha_mini_lake.launch paused:=false
+<span class="c"># in another sourced terminal</span>
+rostopic list | grep -E 'nezha_mini|drag'
+rosservice list | grep -E 'hydrodynamics|phase'</pre>
+  <div class="note"><b>Build failing?</b> The usual causes are a submodule that was not initialized
+  (repeat step 2) or a missing system dependency (repeat <code>rosdep install</code>).</div>
+
+  <h2 id="layout" style="margin-top:44px">Package layout</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Path</th><th>Content</th></tr>
+    <tr><td><code>src/nezha_sim/nezha_description</code></td><td>URDF / Xacro robot models, meshes and the shared macro library</td></tr>
+    <tr><td><code>src/nezha_sim/nezha_gazebo</code></td><td>Worlds, models, launch files, controllers and utilities</td></tr>
+    <tr><td><code>src/nezha_sim/nezha_plugins</code></td><td>C++ Gazebo plugins: unified hydrodynamics (PSC), NSE motor model, TR drag, waves, buoyancy, telemetry, MAVLink</td></tr>
+    <tr><td><code>src/nezha_sim/third_party</code></td><td>Vendored UUV Simulator port and pinned upstream submodules</td></tr>
+    <tr><td><code>leap/</code>, <code>data/</code>, <code>experiments/</code></td><td>Reproduction material of the paper (<a href="tutorials.html#reproduce">Tutorial 5</a>)</td></tr>
+  </table></div>
+  <p style="margin-top:20px"><a class="btn primary" href="tutorials.html">Next: tutorials →</a></p>
+</div></section>
+
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>NezhaSim</h4>
+      <p>An open-source ROS / Gazebo platform for robots that fly, float, dive and drive in one
+      continuous physics world.</p>
+      <p>Jiaqing Wang, Ruixuan Hu, Yulin Bai, Dongping Wang, Hexiong Zhou, Zheng Zeng<br>Shanghai Jiao Tong University</p>
+    </div>
+    <div>
+      <h4>Documentation</h4>
+      <a href="installation.html">Installation</a>
       <a href="tutorials.html">Tutorials</a>
       <a href="architecture.html">Architecture</a>
       <a href="robots.html">Robots &amp; Worlds</a>
-      <a href="index.html#cite">Cite</a>
-      <a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub ↗</a>
     </div>
-  </div>
-</nav>
-
-<main class="page">
-  <div class="page-head">
-    <div class="eyebrow">Getting started</div>
-    <h1>Installation</h1>
-  </div>
-  <p class="lead">NezhaSim ships three ROS packages, a vendored ROS Noetic compatibility tree, and
-     pinned Git submodules. Build time depends on the machine and is not estimated here.</p>
-
-  <h2>Requirements</h2>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Component</th><th>Version</th><th>Notes</th></tr></thead>
-      <tbody>
-        <tr><td>OS</td><td>Ubuntu 20.04 LTS</td><td>Focal Fossa</td></tr>
-        <tr><td>ROS</td><td>Noetic</td><td><code>ros-noetic-desktop-full</code></td></tr>
-        <tr><td>Gazebo</td><td>11</td><td>via <code>gazebo_ros</code></td></tr>
-        <tr><td>Build tools</td><td>catkin_tools, rosdep</td><td><code>catkin build</code> workflow</td></tr>
-        <tr><td>GPU</td><td>optional</td><td>Only needed for high-resolution rendering; physics runs on CPU</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="note"><b>Heads-up:</b> NezhaSim targets <b>ROS 1 / Gazebo Classic</b>. The roadmap moves to
-     ROS 2 + PX4, but the current release depends on the Noetic toolchain.</div>
-
-  <h2>1 · Install prerequisites</h2>
-<pre><span class="c"># ROS Noetic (skip if already installed)</span>
-<span class="k">sudo</span> apt update
-<span class="k">sudo</span> apt install ros-noetic-desktop-full
-
-<span class="c"># Build &amp; dependency tooling</span>
-<span class="k">sudo</span> apt install python3-catkin-tools python3-rosdep
-<span class="k">sudo</span> rosdep init && rosdep update</pre>
-
-  <h2>2 · Clone the workspace and dependencies</h2>
-<pre><span class="k">git</span> clone --recurse-submodules \
-  https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws</pre>
-
-  <h2>3 · If you already cloned without submodules</h2>
-<pre><span class="k">cd</span> ~/nezha_ws
-<span class="k">git</span> submodule update --init --recursive</pre>
-  <p>The ROS Noetic UUV compatibility tree is vendored; the other upstream repositories are pinned
-     as submodules. <code>src/nezha_sim/nezha.repos</code> records the same upstream revisions for
-     auditing and advanced workspace layouts.</p>
-
-  <h2>4 · Resolve system deps &amp; build</h2>
-<pre><span class="k">cd</span> ~/nezha_ws
-<span class="k">rosdep</span> install --from-paths src --ignore-src -r -y
-<span class="k">catkin</span> build
-<span class="k">source</span> devel/setup.bash</pre>
-
-  <div class="tip"><b>Tip:</b> add <code>source ~/nezha_ws/devel/setup.bash</code> to your
-     <code>~/.bashrc</code> so every new shell sees the workspace.</div>
-
-  <h2>5 · Verify the install</h2>
-  <p>Launch a transmedium quadrotor in a lake. Gazebo should open with the vehicle in the scene; the
-     service discovery commands below confirm the plugins loaded.</p>
-<pre><span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch paused:=false
-
-<span class="c"># in another sourced terminal</span>
-<span class="k">rostopic</span> list | grep -E 'nezha_mini|drag'
-<span class="k">rosservice</span> list | grep -E 'hydrodynamics|phase'</pre>
-
-  <div class="warn"><b>Build failing?</b> The most common causes are an uninitialized submodule
-     (re-run step 3) or unresolved system dependencies (re-run <code>rosdep install</code>).</div>
-
-  <h2>Package layout</h2>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Package</th><th>What's inside</th></tr></thead>
-      <tbody>
-        <tr><td><code>nezha_description</code></td><td>URDF/Xacro robot models, meshes, and the shared Xacro macro library.</td></tr>
-        <tr><td><code>nezha_gazebo</code></td><td>Gazebo worlds, models, launch files, control &amp; utility scripts.</td></tr>
-        <tr><td><code>nezha_plugins</code></td><td>C++ Gazebo plugins: hydrodynamics, buoyancy, wave field, transmedium drag, motor model, MAVLink bridge.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <p style="margin-top:34px;"><a class="btn btn-primary" href="tutorials.html">Next: Tutorials →</a></p>
-</main>
-
-<footer>
-  <div class="wrap">
-    <div class="col"><h4>NezhaSim</h4><p style="margin:0;max-width:260px;">A transmedium air–land–ocean robotics simulator built on the ROS / Gazebo ecosystem.</p></div>
-    <div class="col"><h4>Documentation</h4>
-      <p style="margin:4px 0;"><a href="installation.html">Installation</a></p>
-      <p style="margin:4px 0;"><a href="tutorials.html">Tutorials</a></p>
-      <p style="margin:4px 0;"><a href="architecture.html">Architecture</a></p>
-      <p style="margin:4px 0;"><a href="robots.html">Robots &amp; Worlds</a></p></div>
-    <div class="col"><h4>Project</h4>
-      <p style="margin:4px 0;"><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub repository</a></p>
-      <p style="margin:4px 0;"><a href="index.html#cite">How to cite</a></p>
-      <p style="margin:4px 0;"><a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact maintainer</a></p></div>
-    <div class="copy">© 2026 NezhaSim · Shanghai Jiao Tong University. Third-party packages retain their own upstream licenses.</div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator">GitHub repository</a>
+      <a href="index.html#reproduce">Reproduce the paper</a>
+      <a href="index.html#cite">How to cite</a>
+      <a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact the maintainer</a>
+    </div>
+    <div class="fine">© 2026 NezhaSim authors, Shanghai Jiao Tong University. RotorS, UUV Simulator,
+    ASV-Wave, Husky and the other upstream packages keep their own licenses.</div>
   </div>
 </footer>
-
 </body>
 </html>

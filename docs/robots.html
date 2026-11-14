@@ -1,126 +1,117 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Robots &amp; Worlds — NezhaSim</title>
-<meta name="description" content="The catalogue of NezhaSim vehicles, simulation worlds and Gazebo physics plugins.">
-<link rel="icon" href="assets/img/logo.gif">
+<title>Robots & Worlds · NezhaSim</title>
+<meta name="description" content="NezhaSim: an open-source ROS / Gazebo simulator for robots that cross air, surface, underwater and ground.">
+<meta property="og:title" content="Robots & Worlds · NezhaSim">
+<meta property="og:description" content="NezhaSim: an open-source ROS / Gazebo simulator for robots that cross air, surface, underwater and ground.">
+<meta property="og:image" content="assets/img/poster.webp">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,650&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/site.js" defer></script>
 </head>
 <body>
-<div class="baseline-banner">
-  <span class="pill">Current source</span>
-  Robot and world names on this page refer to the repository's ROS&nbsp;Noetic / Gazebo&nbsp;11 workspace.
-</div>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">NezhaSim<span>.</span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Menu">Menu</button>
+    <nav class="nav"><a href="index.html">Home</a><a href="installation.html">Install</a><a href="tutorials.html">Tutorials</a><a href="architecture.html">Architecture</a><a href="robots.html" aria-current="page">Robots &amp; Worlds</a><a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator">GitHub ↗</a></nav>
+  </div>
+</header>
+<main>
 
+<section class="page-head"><div class="wrap">
+  <div class="eyebrow">Catalogue</div>
+  <h1>Robots &amp; Worlds</h1>
+  <p class="lead">Every vehicle, world and plugin in the workspace. Shared Xacro lives in
+  <code>nezha_description/common/</code> (aerial macros) and
+  <code>nezha_description/underwater_components/</code> (underwater sensors and snippets).</p>
+  <div class="toc"><a href="#models">Robot models</a><a href="#worlds">Worlds</a><a href="#plugins">Plugins</a><a href="#scenarios">Validation scenarios</a></div>
+</div></section>
 
-<nav class="nav">
-  <div class="nav-inner">
-    <a class="nav-brand" href="index.html"><img src="assets/img/logo.gif" alt="NezhaSim logo"><span>Nezha<b>Sim</b></span></a>
-    <div class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="installation.html">Install</a>
+<section class="block"><div class="wrap">
+  <h2 id="models">Robot models</h2>
+  <div class="table-wrap"><table>
+    <tr><th>Model</th><th>Domains</th><th>Notes</th></tr>
+    <tr><td><code>nezha_mini</code></td><td>air + underwater</td><td>Transmedium quadrotor; reference model for the Xacro conventions.</td></tr>
+    <tr><td><code>nezha_mini_cam</code></td><td>air + underwater</td><td><code>nezha_mini</code> with an onboard camera.</td></tr>
+    <tr><td><code>nezha_mini_hil</code></td><td>air + underwater</td><td>Variant for PX4 hardware in the loop.</td></tr>
+    <tr><td><code>nezha_f</code>, <code>nezha_f_mav</code></td><td>air + underwater</td><td>Nezha-F; <code>_mav</code> adds the PX4 / MAVLink interface.</td></tr>
+    <tr><td><code>nezha_husky</code>, <code>nezha_husky1</code></td><td>ground + air + underwater</td><td>Husky UGV with aerial and underwater parts (Scenario A).</td></tr>
+    <tr><td><code>nezha_rocket</code></td><td>air + underwater</td><td>Rocket-shaped transmedium body.</td></tr>
+    <tr><td><code>rexrov_spotlight</code>, <code>spotlight</code></td><td>underwater</td><td>RexROV with an articulated spotlight.</td></tr>
+    <tr><td><code>iris</code></td><td>air</td><td>Stock Iris quadrotor from RotorS.</td></tr>
+    <tr><td><code>nezha_gantry_distance</code>, <code>nezha_gantry_velocity</code></td><td>test rig</td><td>Constrained gantries for force and identification tests.</td></tr>
+    <tr><td><code>nezha_beetle</code></td><td>air + underwater</td><td>Experimental (incomplete meshes).</td></tr>
+  </table></div>
+
+  <h2 id="worlds" style="margin-top:50px">Worlds</h2>
+  <p>In <code>nezha_gazebo/worlds/</code>:</p>
+  <div class="grid-2">
+    <div class="card"><div class="tag">Lakes and calm water</div><p><code>nezha_lake</code>, <code>nezha_empty</code>, <code>nezha_empty_underwater</code>, <code>nezha_auv_underwater</code></p></div>
+    <div class="card"><div class="tag">Open ocean</div><p><code>nezha_ocean</code>: spectral wave field for surface and transmedium tests.</p></div>
+    <div class="card"><div class="tag">Terrain and multi-domain</div><p><code>underwater_heightmap</code>, <code>nezha_husky_demo</code></p></div>
+    <div class="card"><div class="tag">Survey sites</div><p><code>nezha_herkules_ship_wreck</code>, <code>nezha_mangalia</code>, <code>nezha_mumbles_head</code>, <code>nezha_munkholmen</code></p></div>
+  </div>
+
+  <h2 id="plugins" style="margin-top:50px">Physics plugins</h2>
+  <p>Built by <code>nezha_plugins</code>:</p>
+  <div class="table-wrap"><table>
+    <tr><th>Library</th><th>Role</th></tr>
+    <tr><td><code>nezha_unified_plugin</code></td><td>Unified hydrodynamics: blends the surface and Fossen models (PSC); <code>&lt;rigid_switching&gt;</code> gives PSC-RS.</td></tr>
+    <tr><td><code>nezha_motor_model</code></td><td>Transmedium propeller and thruster model with the NSE (LEAP).</td></tr>
+    <tr><td><code>nezha_transmedia_drag_plugin</code></td><td>Water-entry and water-exit resistance, the TR model (LEAP).</td></tr>
+    <tr><td><code>nezha_underwater_plugin</code></td><td>Underwater rigid-body hydrodynamics (Fossen).</td></tr>
+    <tr><td><code>nezha_buoyant_object_plugin</code></td><td>Per-link buoyancy from the submerged volume.</td></tr>
+    <tr><td><code>nezha_surface_plugin</code></td><td>Free-surface interaction.</td></tr>
+    <tr><td><code>nezha_wavefield_plugin</code>, <code>nezha_wavefieldmodel_plugin</code></td><td>Ocean wave field.</td></tr>
+    <tr><td><code>nezha_wave_probe_plugin</code></td><td>Wave-height probe.</td></tr>
+    <tr><td><code>nezha_phase_switch_plugin</code></td><td>Phase detection for the rigid-switching baseline.</td></tr>
+    <tr><td><code>nezha_step_timer_plugin</code></td><td>Per-step timing of the physics loop (profiling).</td></tr>
+    <tr><td><code>nezha_terrain_detector_plugin</code>, <code>nezha_wheel_efficiency_plugin</code></td><td>Ground contact and wheel efficiency on soft or wet terrain.</td></tr>
+    <tr><td><code>nezha_robot_state_plugin</code></td><td>Robot-state publishing.</td></tr>
+    <tr><td><code>nezha_mavlink_interface</code></td><td>PX4 / MAVLink bridge.</td></tr>
+  </table></div>
+
+  <h2 id="scenarios" style="margin-top:50px">Validation scenarios</h2>
+  <div class="table-wrap"><table>
+    <tr><th>ID</th><th>Platform</th><th>Task</th><th>Domain</th></tr>
+    <tr><td>A</td><td>Nezha-Husky</td><td>All-domain availability</td><td>Land → water → air</td></tr>
+    <tr><td>B</td><td>Nezha-Mini</td><td>Underwater attitude control</td><td>Underwater</td></tr>
+    <tr><td>C</td><td>Nezha-F</td><td>Transition trajectory tracking</td><td>Water → air</td></tr>
+  </table></div>
+  <p style="margin-top:14px"><a href="index.html#results">Results</a> · <a href="tutorials.html#reproduce">Reproduce them</a></p>
+</div></section>
+
+</main>
+<footer class="site-footer">
+  <div class="wrap">
+    <div>
+      <h4>NezhaSim</h4>
+      <p>An open-source ROS / Gazebo platform for robots that fly, float, dive and drive in one
+      continuous physics world.</p>
+      <p>Jiaqing Wang, Ruixuan Hu, Yulin Bai, Dongping Wang, Hexiong Zhou, Zheng Zeng<br>Shanghai Jiao Tong University</p>
+    </div>
+    <div>
+      <h4>Documentation</h4>
+      <a href="installation.html">Installation</a>
       <a href="tutorials.html">Tutorials</a>
       <a href="architecture.html">Architecture</a>
-      <a href="robots.html" class="active">Robots &amp; Worlds</a>
-      <a href="index.html#cite">Cite</a>
-      <a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub ↗</a>
+      <a href="robots.html">Robots &amp; Worlds</a>
     </div>
-  </div>
-</nav>
-
-<main class="page">
-  <div class="page-head">
-    <div class="eyebrow">Catalogue</div>
-    <h1>Robots &amp; Worlds</h1>
-  </div>
-  <p class="lead">Every vehicle, world and plugin shipped with NezhaSim. Shared Xacro lives in
-     <code>nezha_description/common/</code> (UAV macros) and
-     <code>nezha_description/underwater_components/</code> (UUV sensor/snippet macros).</p>
-
-  <h2>Robot models</h2>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Model</th><th>Domain(s)</th><th>Notes</th></tr></thead>
-      <tbody>
-        <tr><td><code>nezha_mini</code></td><td>air + underwater</td><td>Transmedia quadrotor. <b>Reference model</b> for the Xacro convention.</td></tr>
-        <tr><td><code>nezha_mini_cam</code></td><td>air + underwater</td><td><code>nezha_mini</code> with an onboard camera.</td></tr>
-        <tr><td><code>nezha_f</code> / <code>nezha_f_mav</code></td><td>air + underwater</td><td>Nezha-F vehicle; <code>_mav</code> adds the PX4 / MAVLink interface.</td></tr>
-        <tr><td><code>nezha_husky</code> / <code>nezha_husky1</code></td><td>ground + air + underwater</td><td>Husky UGV carrying UAV and UUV payloads (Scenario A).</td></tr>
-        <tr><td><code>nezha_rocket</code></td><td>air + underwater</td><td>Rocket-style transmedium body.</td></tr>
-        <tr><td><code>rexrov_spotlight</code> / <code>spotlight</code></td><td>underwater</td><td>RexROV ROV with an articulated spotlight.</td></tr>
-        <tr><td><code>iris</code></td><td>air</td><td>Stock Iris quad (rotors_simulator reference).</td></tr>
-        <tr><td><code>nezha_gantry_distance</code> / <code>nezha_gantry_velocity</code></td><td>test rig</td><td>Constrained gantry rigs for force / identification tests.</td></tr>
-        <tr><td><code>nezha_beetle</code></td><td>air + underwater</td><td>Experimental (incomplete meshes).</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>Worlds</h2>
-  <p>Found under <code>nezha_gazebo/worlds/</code> — lakes, open ocean, underwater heightmaps and
-     several real-bathymetry survey sites:</p>
-  <div class="cards">
-    <div class="card"><div class="ico">🏞️</div><h3>Lakes &amp; calm water</h3><p><code>nezha_lake</code>, <code>nezha_empty</code>, <code>nezha_empty_underwater</code>, <code>nezha_auv_underwater</code></p></div>
-    <div class="card"><div class="ico">🌊</div><h3>Open ocean</h3><p><code>nezha_ocean</code> — spectral wave field for surface &amp; transmedium tests.</p></div>
-    <div class="card"><div class="ico">⛰️</div><h3>Terrain &amp; multi-domain</h3><p><code>underwater_heightmap</code>, <code>nezha_husky_demo</code></p></div>
-    <div class="card"><div class="ico">🚢</div><h3>Survey sites</h3><p><code>nezha_herkules_ship_wreck</code>, <code>nezha_mangalia</code>, <code>nezha_mumbles_head</code>, <code>nezha_munkholmen</code></p></div>
-  </div>
-
-  <h2>Physics plugins</h2>
-  <p>Built by <code>nezha_plugins</code> — the C++ Gazebo plugins that implement the unified pipeline:</p>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>Library</th><th>Role</th></tr></thead>
-      <tbody>
-        <tr><td><code>nezha_unified_plugin</code></td><td>Unified buoyancy + drag hydrodynamics pipeline.</td></tr>
-        <tr><td><code>nezha_buoyant_object_plugin</code></td><td>Per-link buoyancy from submerged volume.</td></tr>
-        <tr><td><code>nezha_underwater_plugin</code></td><td>Underwater rigid-body hydrodynamics (Fossen).</td></tr>
-        <tr><td><code>nezha_transmedia_drag_plugin</code></td><td>Cross-medium (air / water-entry / exit) lift &amp; drag — the <b>TR</b> model.</td></tr>
-        <tr><td><code>nezha_motor_model</code></td><td>Transmedium propeller / thruster (in-air &amp; in-water CTR) — carries the <b>NSE</b> model.</td></tr>
-        <tr><td><code>nezha_surface_plugin</code></td><td>Free-surface interaction.</td></tr>
-        <tr><td><code>nezha_wavefield_plugin</code> / <code>nezha_wavefieldmodel_plugin</code></td><td>Ocean wave-field generation.</td></tr>
-        <tr><td><code>nezha_wave_probe_plugin</code></td><td>Wave-height probe sensor.</td></tr>
-        <tr><td><code>nezha_phase_switch_plugin</code></td><td>Air ⇄ water phase detection / switching — the <b>PSC</b>.</td></tr>
-        <tr><td><code>nezha_terrain_detector_plugin</code></td><td>Ground / terrain contact detection.</td></tr>
-        <tr><td><code>nezha_wheel_efficiency_plugin</code></td><td>UGV wheel efficiency on soft / wet terrain.</td></tr>
-        <tr><td><code>nezha_robot_state_plugin</code></td><td>Robot-state publishing.</td></tr>
-        <tr><td><code>nezha_mavlink_interface</code></td><td>PX4 / MAVLink bridge.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <h2>Validation scenarios</h2>
-  <p>The three benchmark scenarios from the paper, each reproducible from the launch files:</p>
-  <div class="tablewrap">
-    <table>
-      <thead><tr><th>ID</th><th>Platform</th><th>Task</th><th>Domain</th></tr></thead>
-      <tbody>
-        <tr><td>A</td><td>Nezha-Husky</td><td>All-domain availability</td><td>Land → Water → Air</td></tr>
-        <tr><td>B</td><td>Nezha-Mini</td><td>Underwater attitude control</td><td>Underwater</td></tr>
-        <tr><td>C</td><td>Nezha-F</td><td>Transition trajectory tracking</td><td>Water → Air</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <p style="margin-top:34px;"><a class="btn btn-primary" href="tutorials.html">Run these in the tutorials →</a></p>
-</main>
-
-<footer>
-  <div class="wrap">
-    <div class="col"><h4>NezhaSim</h4><p style="margin:0;max-width:260px;">A transmedium air–land–ocean robotics simulator built on the ROS / Gazebo ecosystem.</p></div>
-    <div class="col"><h4>Documentation</h4>
-      <p style="margin:4px 0;"><a href="installation.html">Installation</a></p>
-      <p style="margin:4px 0;"><a href="tutorials.html">Tutorials</a></p>
-      <p style="margin:4px 0;"><a href="architecture.html">Architecture</a></p>
-      <p style="margin:4px 0;"><a href="robots.html">Robots &amp; Worlds</a></p></div>
-    <div class="col"><h4>Project</h4>
-      <p style="margin:4px 0;"><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub repository</a></p>
-      <p style="margin:4px 0;"><a href="index.html#cite">How to cite</a></p>
-      <p style="margin:4px 0;"><a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact maintainer</a></p></div>
-    <div class="copy">© 2026 NezhaSim · Shanghai Jiao Tong University. Third-party packages retain their own upstream licenses.</div>
+    <div>
+      <h4>Project</h4>
+      <a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator">GitHub repository</a>
+      <a href="index.html#reproduce">Reproduce the paper</a>
+      <a href="index.html#cite">How to cite</a>
+      <a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact the maintainer</a>
+    </div>
+    <div class="fine">© 2026 NezhaSim authors, Shanghai Jiao Tong University. RotorS, UUV Simulator,
+    ASV-Wave, Husky and the other upstream packages keep their own licenses.</div>
   </div>
 </footer>
-
 </body>
 </html>

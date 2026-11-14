@@ -1,247 +1,301 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NezhaSim — A Transmedium Air · Surface · Underwater · Ground Simulator for ROS</title>
-<meta name="description" content="NezhaSim is an open-source, ROS/Gazebo simulator that bridges air, water surface, underwater and ground domains for transmedium robots.">
-<link rel="icon" href="assets/img/logo.gif">
+<title>NezhaSim: Bridging Air, Land and Ocean Through ROS</title>
+<meta name="description" content="NezhaSim: an open-source ROS / Gazebo simulator for robots that cross air, surface, underwater and ground.">
+<meta property="og:title" content="NezhaSim: Bridging Air, Land and Ocean Through ROS">
+<meta property="og:description" content="NezhaSim: an open-source ROS / Gazebo simulator for robots that cross air, surface, underwater and ground.">
+<meta property="og:image" content="assets/img/poster.webp">
+<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,650&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/style.css">
+<script src="assets/js/site.js" defer></script>
 </head>
 <body>
-<div class="baseline-banner">
-  <span class="pill">Current source</span>
-  The repository now contains the current ROS&nbsp;Noetic / Gazebo&nbsp;11 NezhaSim workspace.
-</div>
-
-
-<!-- ============================================================== NAV -->
-<nav class="nav">
-  <div class="nav-inner">
-    <a class="nav-brand" href="index.html">
-      <img src="assets/img/logo.gif" alt="NezhaSim logo">
-      <span>Nezha<b>Sim</b></span>
-    </a>
-    <div class="nav-links">
-      <a href="index.html" class="active">Home</a>
-      <a href="installation.html">Install</a>
-      <a href="tutorials.html">Tutorials</a>
-      <a href="architecture.html">Architecture</a>
-      <a href="robots.html">Robots &amp; Worlds</a>
-      <a href="index.html#cite">Cite</a>
-      <a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub ↗</a>
-    </div>
-  </div>
-</nav>
-
-<!-- ============================================================= HERO -->
-<header class="hero">
-  <figure class="overview-figure overview-figure-hero">
-    <a href="assets/fig_main.pdf" target="_blank" rel="noopener" aria-label="Open the NezhaSim system overview as a PDF">
-      <img src="assets/img/fig_main.jpg" alt="NezhaSim overview showing the motivating problems, unified transmedium simulation approach, and validation scenarios">
-    </a>
-    <figcaption>NezhaSim at a glance — select the figure to open the <a href="assets/fig_main.pdf" target="_blank" rel="noopener">original PDF</a>.</figcaption>
-  </figure>
-  <img class="hero-logo" src="assets/img/logo.gif" alt="NezhaSim animated logo">
-  <h1>Nezha<b>Sim</b></h1>
-  <p class="tagline">Bridging Air, Land &amp; Ocean Through ROS</p>
-  <p class="sub">An open-source, ROS&nbsp;/&nbsp;Gazebo simulation platform for <b>transmedium robots</b> —
-     vehicles that fly through the air, float on the surface, dive underwater, and drive on the
-     ground, all in one continuous physics world.</p>
-  <div class="hero-badges">
-    <span class="badge">ROS Noetic</span>
-    <span class="badge">Gazebo 11</span>
-    <span class="badge">Ubuntu 20.04</span>
-    <span class="badge">Air · Surface · Underwater · Ground</span>
-    <span class="badge">Open Source</span>
-  </div>
-  <div>
-    <a class="btn btn-primary" href="tutorials.html">Get started →</a>
-    <a class="btn btn-ghost" href="installation.html">Installation guide</a>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html">NezhaSim<span>.</span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-label="Menu">Menu</button>
+    <nav class="nav"><a href="index.html" aria-current="page">Home</a><a href="installation.html">Install</a><a href="tutorials.html">Tutorials</a><a href="architecture.html">Architecture</a><a href="robots.html">Robots &amp; Worlds</a><a class="gh" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator">GitHub ↗</a></nav>
   </div>
 </header>
+<main>
 
-<!-- ========================================================= OVERVIEW -->
-<section class="section">
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="eyebrow">Air · Surface · Underwater · Ground</div>
+      <h1>NezhaSim</h1>
+      <p class="subtitle">Bridging Air, Land and Ocean Through ROS</p>
+      <p class="pitch">One ROS / Gazebo workspace in which a single robot can drive ashore, dive,
+      break through the surface and fly, while every force acting on it stays observable.</p>
+      <p class="authors"><span class="who">Jiaqing Wang, Ruixuan Hu, Yulin Bai, Dongping Wang, Hexiong Zhou, Zheng Zeng</span></p>
+      <p class="affil">Shanghai Jiao Tong University</p>
+      <span class="venue">IEEE Transactions on Automation Science and Engineering (accepted, 2026)</span>
+      <div class="buttons">
+        <span class="btn disabled" title="The paper is accepted; the link follows on publication">Paper <small>to appear</small></span>
+        <a class="btn primary" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Code</a>
+        <a class="btn" href="#video">Video</a>
+        <a class="btn" href="tutorials.html">Tutorials</a>
+      </div>
+    </div>
+    <div id="video">
+      <div class="media-frame">
+        <video src="assets/video/nezhasim_highlights.mp4" poster="assets/img/poster.webp" autoplay muted loop playsinline controls preload="metadata"></video>
+      </div>
+      <p class="media-note">Highlights, 37 s, muted: Scenario A in NezhaSim, then the Nezha-Mini and
+      Nezha-F field records next to their NezhaSim runs (Scenarios B and C).</p>
+    </div>
+  </div>
+  <svg class="waterline" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M0,34 C120,14 240,14 360,34 C480,54 600,54 720,34 C840,14 960,14 1080,34 C1200,54 1320,54 1440,34 L1440,70 L0,70 Z" fill="#0e3a4a"/>
+  <path class="crest" d="M0,34 C120,14 240,14 360,34 C480,54 600,54 720,34 C840,14 960,14 1080,34 C1200,54 1320,54 1440,34"/>
+</svg>
+</section>
+
+<div class="sea">
+  <div class="wrap stats">
+    <div class="stat"><div class="num">426<span class="unit">µs</span></div>
+      <div class="lbl">mean cost of the NSE and TR plugins per 2 ms physics step on Nezha-Mini; real-time factor ≥ 0.96</div></div>
+    <div class="stat"><div class="num">8.5 → 1.3<span class="unit">N</span></div>
+      <div class="lbl">largest step of the applied vertical force across the waterline, rigid switching vs. PSC</div></div>
+    <div class="stat"><div class="num">92<span class="unit">%</span></div>
+      <div class="lbl">of the Scenario B path within 0.5 m of the Nezha-Mini field record (100 closed-loop runs)</div></div>
+    <div class="stat"><div class="num">30 / 30</div>
+      <div class="lbl">closed-loop missions through waves succeed with PSC and with rigid switching; rigid switching raises the force step by a median ×2.9</div></div>
+  </div>
+</div>
+
+<section class="block">
   <div class="wrap">
-    <h2 class="center">One robot. Four media. No discontinuities.</h2>
-    <p class="lead center" style="max-width:780px;margin:14px auto 0;">
-      Most robotics simulators are tailored to a single operating domain, which makes them poorly
-      suited to <b>transmedium systems</b> that span air, surface, underwater and ground operation.
-      NezhaSim couples established single-domain simulators — ASV-Wave, the UUV Simulator, RotorS and
-      Husky — into a unified physics engine, then keeps force and data streams <i>continuous</i> as a
-      vehicle crosses every medium boundary.
-    </p>
+    <div class="section-head"><span class="idx">01</span><h2>Abstract</h2></div>
+    <p class="abstract">Most existing robotics simulators are tailored to a single operating domain,
+    limiting their ability to support transmedium systems that span air, surface, underwater, and
+    ground operation. This paper presents NezhaSim, an open-source, ROS-compatible platform for
+    unified multi-domain simulation. NezhaSim couples two components: a Lightweight Empirical
+    Approximation Pipeline (LEAP) that compresses near-surface-effect and transmedium-resistance data
+    into constant-time empirical models, and a Phase Switch Console (PSC) that blends multi-physics
+    forces continuously across domain boundaries to keep force and data streams continuous during
+    transitions. NezhaSim further exposes decoupled force components through ROS for analysis and
+    debugging. Validation against field data on the Nezha-HAUV (Hybrid Aerial Underwater Vehicle)
+    series shows that NezhaSim reproduces representative task-level behaviors and force trends with
+    sufficient agreement to support controller development and simulator debugging, providing a
+    practical platform that can accelerate transmedium robotics development while reducing reliance
+    on costly field experiments.</p>
+    <figure>
+      <a href="assets/fig_main.pdf"><img src="assets/img/fig_main.webp" width="1800" height="681" loading="lazy"
+        alt="Overview of the NezhaSim framework: problems, approach and validations"></a>
+      <figcaption><b>Overview.</b> NezhaSim models near-surface effects, empirical air–water
+      transition drag and underwater thrust, and is validated against prior field records of water
+      entry, underwater navigation and water exit. Select the figure for the PDF.</figcaption>
+    </figure>
+  </div>
+</section>
 
-    <div class="domains">
-      <div class="domain d-air"><span class="e">🚁</span><b>Air</b><small>Rotor aerodynamics (RotorS)</small></div>
-      <div class="domain d-surface"><span class="e">🌊</span><b>Surface</b><small>Spectral wave field (ASV-Wave)</small></div>
-      <div class="domain d-water"><span class="e">🐟</span><b>Underwater</b><small>6-DOF Fossen hydrodynamics (UUV)</small></div>
-      <div class="domain d-ground"><span class="e">🛞</span><b>Ground</b><small>UGV terrain interaction (Husky)</small></div>
+<section class="block alt">
+  <div class="wrap">
+    <div class="section-head"><span class="idx">02</span><h2>Three components</h2></div>
+    <p class="lead">NezhaSim refactors RotorS, the UUV Simulator, ASV-Wave and the Husky simulator
+    into one engine and adds three parts on top. It is a system-level integration layer for
+    controller development and debugging, not a replacement for CFD.</p>
+    <div class="grid-3" style="margin-top:22px">
+      <div class="card">
+        <div class="tag">PSC · Phase Switch Console</div>
+        <h3>Blend, don't switch</h3>
+        <p>The surface model and the underwater (Fossen) model both run at every physics step and are
+        blended by the continuous submergence ratio. This keeps the applied wrench continuous across
+        domain boundaries and reduces the force jumps of rigid switching.</p>
+        <div class="fact">Quasi-static crossing: an 8.5 N jump with rigid switching, at most about 1.3 N between levels with PSC.</div>
+        <figure><img src="assets/img/fig_ablation_study2.webp" width="900" height="648" loading="lazy" alt="Applied vertical force versus submersion ratio for PSC and PSC-RS"></figure>
+      </div>
+      <div class="card">
+        <div class="tag">LEAP · Empirical models</div>
+        <h3>Hard fluid effects in constant time</h3>
+        <p>LEAP compresses rig, CFD and field data on the near-surface effect (NSE) and transmedium
+        resistance (TR) into closed-form models: a physical backbone plus a fitted residual. Each
+        query costs the same regardless of the dataset size.</p>
+        <div class="fact">LEAP queries of four rotors and the TR term: 2.2 µs per step. Whole physics step: 811 µs on average.</div>
+        <figure><img src="assets/img/fig_NSE_CMR.webp" width="1100" height="718" loading="lazy" alt="NSE and TR plugin inputs and outputs"></figure>
+      </div>
+      <div class="card">
+        <div class="tag">MT · Mechanical Transparency</div>
+        <h3>Every force on its own stream</h3>
+        <p>Instead of a black-box net force, NezhaSim publishes buoyancy, damping, added mass, wave
+        and transition drag separately through ROS, so a failure can be traced to one physical
+        effect rather than read from the trajectory.</p>
+        <div class="fact">MT is also how the PSC ablations measure the force the simulator actually applies.</div>
+        <figure><img src="assets/img/fig_S1_force.webp" width="1100" height="650" loading="lazy" alt="Averaged hydrodynamic force records during Scenario A"></figure>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ========================================================= FEATURES -->
-<section class="section alt">
+<section class="block" id="results">
   <div class="wrap">
-    <h2 class="center">Core innovations</h2>
-    <p class="lead center">Three components turn four separate simulators into one continuous world.</p>
-    <div class="cards">
-      <div class="card">
-        <div class="ico">🔀</div>
-        <h3>Phase Switch Console (PSC)</h3>
-        <p>A centralized orchestration middleware that replaces rigid state machines. It continuously
-           broadcasts the environmental state (including the live wave-elevation field) to every
-           decoupled solver and blends multi-physics wrenches so transitions stay smooth — no force
-           spikes at the waterline.</p>
-        <span class="tag">Continuous transitions</span>
+    <div class="section-head"><span class="idx">03</span><h2>Validation</h2></div>
+    <p class="lead">Three scenarios and a closed-loop PSC test. Numbers are those of the paper.</p>
+
+    <div class="scenario">
+      <div>
+        <div class="letter">A</div>
+        <h3>Land, water and air in one run</h3>
+        <p>The virtual Nezha-Husky drives past obstacles, enters the lake, tracks an underwater path
+        with sonar mapping, exits the water and hovers. Its hydrodynamic parameters are hypothetical,
+        so this scenario checks framework behavior and module integration.</p>
+        <ul>
+          <li>21 runs from the same start pose; every run completed the mission.</li>
+          <li>MT shows buoyancy, drag and the impact peaks at the water exit as separate streams.</li>
+        </ul>
       </div>
-      <div class="card">
-        <div class="ico">⚡</div>
-        <h3>LEAP Empirical Pipeline</h3>
-        <p>The Lightweight Empirical Approximation Pipeline distills CFD and field data for
-           near-surface effects and transmedium resistance into closed-form, constant-time
-           <i>O(1)</i> surrogates — <b>0.09&nbsp;ms</b> vs. 135&nbsp;ms for RBF interpolation —
-           fast enough for real-time closed-loop control.</p>
-        <span class="tag">Real-time physics</span>
+      <div class="pics one"><img src="assets/img/fig_S1_simulation.webp" width="1100" height="537" loading="lazy" alt="Scenario A in NezhaSim"></div>
+    </div>
+
+    <div class="scenario">
+      <div>
+        <div class="letter">B</div>
+        <h3>Nezha-Mini underwater, real to sim</h3>
+        <p>The simulated Nezha-Mini tracks the waypoints of a field record (dive, cruise at depth,
+        climb) with its own controller, 100 times.</p>
+        <ul>
+          <li>Distance error below 0.5 m for 92% of the path; peak 1.7 m where the vehicle pitches into the dive.</li>
+          <li>Pitch error within two degrees for 88% of the path.</li>
+        </ul>
       </div>
-      <div class="card">
-        <div class="ico">🔍</div>
-        <h3>Mechanical Transparency (MT)</h3>
-        <p>Instead of a black-box net force, NezhaSim exposes every decoupled wrench component —
-           buoyancy, drag, slamming, rotor thrust — as an inspectable ROS stream for system
-           identification, force-level debugging and real-to-sim calibration.</p>
-        <span class="tag">Per-effect ROS streams</span>
+      <div class="pics"><img src="assets/img/fig_S2_field1.webp" width="1354" height="900" loading="lazy" alt="Field footage of Nezha-Mini underwater"><img src="assets/img/fig_S2_trajectory.webp" width="900" height="625" loading="lazy" alt="Field and averaged simulated trajectory, Scenario B"></div>
+    </div>
+
+    <div class="scenario">
+      <div>
+        <div class="letter">C</div>
+        <h3>Nezha-F water exit, against a baseline</h3>
+        <p>NezhaSim and a UUV Simulator + RotorS baseline without the NSE and TR models fly the same
+        field waypoints from 0.394 m below the surface, 100 times each. All 200 runs completed the
+        transition.</p>
+        <ul>
+          <li>Mean position error 0.148 m (NezhaSim) and 0.141 m (baseline); mean speed error 0.58 m/s in both.</li>
+          <li>NezhaSim breaches 0.18 s after the waypoints, the baseline 0.08 s before; the NSE plugin raises the thrust gain from 0.69 to about 1.15, which the controller absorbs.</li>
+        </ul>
       </div>
-      <div class="card">
-        <div class="ico">🧩</div>
-        <h3>Unified ROS Interface</h3>
-        <p>Flight controllers and navigation stacks run continuously across domains without manual
-           reconfiguration. Drop in custom LEAP models or new sensor plugins without touching the
-           underlying physics engine.</p>
-        <span class="tag">Plug &amp; play</span>
+      <div class="pics"><img src="assets/img/fig_S3_simulation1.webp" width="900" height="755" loading="lazy" alt="Scenario C in NezhaSim"><img src="assets/img/fig_S3_trajectory.webp" width="900" height="891" loading="lazy" alt="Field record and mean trajectories, Scenario C"></div>
+    </div>
+
+    <div class="scenario">
+      <div>
+        <div class="letter">PSC</div>
+        <h3>Closed loop through waves</h3>
+        <p>Nezha-Mini hovers at 1.5 m, dives into the water and takes off again in waves of 0.1 m
+        amplitude and 4 s period, from the same 30 initial conditions under PSC and under rigid
+        switching (PSC-RS).</p>
       </div>
-      <div class="card">
-        <div class="ico">🌐</div>
-        <h3>Wave-coupled NSE</h3>
-        <p>Rotor downwash interacts with the oscillating water surface: the Near-Surface-Effect plugin
-           receives the real-time distance to the moving wave surface rather than the mean water
-           level, enabling wave-coupled aerodynamic interference.</p>
-        <span class="tag">Medium-aware</span>
-      </div>
-      <div class="card">
-        <div class="ico">🛠️</div>
-        <h3>Replaceable Dynamics</h3>
-        <p>Full 6-DOF rigid-body dynamics, not kinematics. Every length scale, buoyancy volume and
-           transition band is derived from the loaded geometry, so nothing needs re-tuning when the
-           vehicle changes.</p>
-        <span class="tag">Geometry-driven</span>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Model</th><th class="num">Success</th><th class="num">Hover RMS error [m]</th><th class="num">Peak |a<sub>z</sub>| at crossing [m/s²]</th><th class="num">Peak MT force step [N]</th></tr>
+          <tr><td>PSC</td><td class="num">30/30</td><td class="num">0.064</td><td class="num">9.3</td><td class="num">8.5</td></tr>
+          <tr><td>PSC-RS</td><td class="num">30/30</td><td class="num">0.064</td><td class="num">12.9</td><td class="num">22.0</td></tr>
+        </table>
+        <p class="media-note">Medians over the runs. PSC-RS raised the peak MT force step in 30 of 30
+        pairs by a median factor of 2.9, and the peak vertical acceleration in 29 pairs by 1.3.</p>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ============================================================ KPIs -->
-<section class="section">
+<section class="block alt">
   <div class="wrap">
-    <h2 class="center">Why it matters</h2>
-    <div class="kpi">
-      <div class="item"><span class="big">0.09 ms</span><small>LEAP inference for a 600-point curve (vs. 135&nbsp;ms RBF)</small></div>
-      <div class="item"><span class="big">~1.3 N</span><small>Largest interface force step with PSC (vs. 8.5&nbsp;N rigid-switch)</small></div>
-      <div class="item"><span class="big">&lt; 0.5 m</span><small>Underwater trajectory error vs. real Nezha-Mini field data</small></div>
-      <div class="item"><span class="big">100 %</span><small>Triple-domain mission success rate (vs. 83% baseline)</small></div>
-    </div>
-  </div>
-</section>
-
-<!-- ====================================================== COMPARISON -->
-<section class="section alt">
-  <div class="wrap">
-    <h2 class="center">How NezhaSim compares</h2>
-    <p class="lead center">Behavioural capabilities required by transmedium algorithm validation.</p>
-    <div class="tablewrap">
+    <div class="section-head"><span class="idx">04</span><h2>Robots and worlds</h2></div>
+    <p class="lead">Transmedium vehicles of the Nezha family, a triple-domain Husky, RexROV and the
+    stock Iris quadrotor, in lakes, open ocean with spectral waves and surveyed sites.</p>
+    <div class="table-wrap" style="margin-top:18px">
       <table>
-        <thead>
-          <tr><th>Behaviour / capability</th><th>UUV Sim</th><th>RotorS</th><th>ASV-Wave</th><th>HoloOcean</th><th>NezhaSim</th></tr>
-        </thead>
-        <tbody>
-          <tr><td>Supported domains</td><td>underwater</td><td>air</td><td>surface</td><td>underwater</td><td><b>air / ground / surface / underwater</b></td></tr>
-          <tr><td>Continuous water ↔ air transition</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓ (PSC)</td></tr>
-          <tr><td>Medium-aware hydrodynamics</td><td class="no">✗</td><td>—</td><td class="no">✗</td><td class="mid">partial</td><td class="yes">✓ (0 N in air)</td></tr>
-          <tr><td>Submergence-scaled buoyancy</td><td class="mid">partial</td><td class="no">✗</td><td class="mid">partial</td><td class="no">✗</td><td class="yes">✓</td></tr>
-          <tr><td>Rotor medium effects</td><td>—</td><td class="no">✗</td><td>—</td><td>—</td><td class="yes">✓ (stop/derate/NSE)</td></tr>
-          <tr><td>Wave/depth-coupled surface forces</td><td>—</td><td>—</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓</td></tr>
-          <tr><td>Per-effect force exposure</td><td class="mid">partial</td><td class="no">✗</td><td class="no">✗</td><td class="no">✗</td><td class="yes">✓ (MT)</td></tr>
-        </tbody>
+        <tr><th>Model</th><th>Domains</th><th>Used in</th></tr>
+        <tr><td><code>nezha_mini</code>, <code>nezha_mini_cam</code></td><td>air + underwater</td><td>Scenario B, PSC closed-loop test, tutorials</td></tr>
+        <tr><td><code>nezha_f</code>, <code>nezha_f_mav</code></td><td>air + underwater</td><td>Scenario C (with PX4 / MAVLink variant)</td></tr>
+        <tr><td><code>nezha_husky</code>, <code>nezha_husky1</code></td><td>ground + air + underwater</td><td>Scenario A</td></tr>
+        <tr><td><code>nezha_rocket</code>, <code>rexrov_spotlight</code>, <code>iris</code></td><td>air / underwater</td><td>examples</td></tr>
       </table>
     </div>
-    <p class="center" style="margin-top:18px;"><a class="btn btn-primary" href="architecture.html">See the full architecture →</a></p>
+    <p style="margin-top:14px"><a href="robots.html">All robots, worlds and plugins →</a></p>
   </div>
 </section>
 
-<!-- ====================================================== QUICK START -->
-<section class="section">
-  <div class="wrap" style="max-width:820px;">
-    <h2 class="center">60-second quick start</h2>
-    <p class="lead center">Already built the workspace? Launch a transmedium take-off in a lake:</p>
-<pre><span class="c"># Transmedia quadrotor in a lake (air ⇄ water take-off / landing)</span>
-<span class="k">roslaunch</span> nezha_gazebo nezha_mini_lake.launch
-
-<span class="c"># Husky multi-domain: ground + air + underwater</span>
-<span class="k">roslaunch</span> nezha_gazebo nezha_husky_UGV_UAV_UUV.launch
-
-<span class="c"># Open ocean world with spectral waves</span>
-<span class="k">roslaunch</span> nezha_gazebo ocean_world.launch</pre>
-    <p class="center"><a class="btn btn-ghost" href="installation.html">Build from source</a>
-       <a class="btn btn-ghost" href="tutorials.html">Full tutorials</a></p>
+<section class="block">
+  <div class="wrap grid-2">
+    <div>
+      <div class="section-head"><span class="idx">05</span><h2>Get started</h2></div>
+      <p>Ubuntu 20.04, ROS Noetic, Gazebo 11. The full guide is on the <a href="installation.html">installation page</a>.</p>
+      <pre>git clone --recurse-submodules \
+  https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws
+cd ~/nezha_ws
+rosdep update --include-eol-distros
+rosdep install --from-paths src --ignore-src -r -y --rosdistro noetic
+catkin init
+catkin config --skiplist rotors_hil_interface mavlink_sitl_gazebo
+catkin build &amp;&amp; source devel/setup.bash
+roslaunch nezha_gazebo nezha_mini_lake.launch paused:=false</pre>
+      <p><a href="tutorials.html">Continue with the tutorials →</a></p>
+    </div>
+    <div id="reproduce">
+      <div class="section-head"><span class="idx">06</span><h2>Reproduce the paper</h2></div>
+      <p>Scripts, training data and recorded runs are in the repository.</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>Result</th><th>Where</th></tr>
+          <tr><td>LEAP fits, Table IV</td><td><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/tree/main/leap"><code>leap/</code></a></td></tr>
+          <tr><td>Scenario A, Fig. 9</td><td><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/tree/main/data/fig9_scenarioA"><code>data/fig9_scenarioA</code></a></td></tr>
+          <tr><td>Scenario B, Fig. 10</td><td><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/tree/main/data/fig10_scenarioB"><code>data/fig10_scenarioB</code></a></td></tr>
+          <tr><td>Scenario C, Fig. 11</td><td><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/tree/main/experiments/scenario_c"><code>experiments/scenario_c</code></a></td></tr>
+          <tr><td>PSC closed loop, Table V; per-step cost</td><td><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator/tree/main/experiments/psc_closed_loop"><code>experiments/psc_closed_loop</code></a></td></tr>
+        </table>
+      </div>
+      <p style="margin-top:12px"><a href="tutorials.html#reproduce">Commands in Tutorial 5 →</a></p>
+    </div>
   </div>
 </section>
 
-<!-- ============================================================ CITE -->
-<section class="section alt" id="cite">
-  <div class="wrap" style="max-width:820px;">
-    <h2 class="center">Citation</h2>
-    <p class="center lead">If NezhaSim supports your research, please cite the accompanying paper:</p>
-<pre><span class="s">@article{nezhasim,
+<section class="block alt" id="cite">
+  <div class="wrap">
+    <div class="section-head"><span class="idx">07</span><h2>Citation</h2></div>
+    <p>If NezhaSim helps your research, please cite the paper (to appear):</p>
+    <pre>@article{wang2026nezhasim,
   title   = {NezhaSim: Bridging Air, Land and Ocean Through ROS},
-  author  = {Wang, Jiaqing and Hu, Ruixuan and Bai, Yuling and
+  author  = {Wang, Jiaqing and Hu, Ruixuan and Bai, Yulin and
              Wang, Dongping and Zhou, Hexiong and Zeng, Zheng},
   journal = {IEEE Transactions on Automation Science and Engineering},
   year    = {2026},
-  note    = {Shanghai Jiao Tong University}
-}</span></pre>
-    <p class="center">Maintainer: <b>Jiaqing Wang</b> · <a href="mailto:jiaqing.wang@sjtu.edu.cn">jiaqing.wang@sjtu.edu.cn</a> · SJTU</p>
+  note    = {To appear}
+}</pre>
+    <p class="affil">Maintainer: Jiaqing Wang · <a href="mailto:jiaqing.wang@sjtu.edu.cn">jiaqing.wang@sjtu.edu.cn</a></p>
   </div>
 </section>
 
-<!-- ========================================================== FOOTER -->
-<footer>
+</main>
+<footer class="site-footer">
   <div class="wrap">
-    <div class="col">
+    <div>
       <h4>NezhaSim</h4>
-      <p style="margin:0;max-width:260px;">A transmedium air–land–ocean robotics simulator built on the
-         ROS / Gazebo ecosystem.</p>
+      <p>An open-source ROS / Gazebo platform for robots that fly, float, dive and drive in one
+      continuous physics world.</p>
+      <p>Jiaqing Wang, Ruixuan Hu, Yulin Bai, Dongping Wang, Hexiong Zhou, Zheng Zeng<br>Shanghai Jiao Tong University</p>
     </div>
-    <div class="col">
+    <div>
       <h4>Documentation</h4>
-      <p style="margin:4px 0;"><a href="installation.html">Installation</a></p>
-      <p style="margin:4px 0;"><a href="tutorials.html">Tutorials</a></p>
-      <p style="margin:4px 0;"><a href="architecture.html">Architecture</a></p>
-      <p style="margin:4px 0;"><a href="robots.html">Robots &amp; Worlds</a></p>
+      <a href="installation.html">Installation</a>
+      <a href="tutorials.html">Tutorials</a>
+      <a href="architecture.html">Architecture</a>
+      <a href="robots.html">Robots &amp; Worlds</a>
     </div>
-    <div class="col">
+    <div>
       <h4>Project</h4>
-      <p style="margin:4px 0;"><a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator" target="_blank" rel="noopener">GitHub repository</a></p>
-      <p style="margin:4px 0;"><a href="index.html#cite">How to cite</a></p>
-      <p style="margin:4px 0;"><a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact maintainer</a></p>
+      <a href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator">GitHub repository</a>
+      <a href="index.html#reproduce">Reproduce the paper</a>
+      <a href="index.html#cite">How to cite</a>
+      <a href="mailto:jiaqing.wang@sjtu.edu.cn">Contact the maintainer</a>
     </div>
-    <div class="copy">
-      © 2026 NezhaSim · State Key Laboratory &amp; School of Oceanography, Shanghai Jiao Tong University.
-      Third-party packages (RotorS, UUV Simulator, ASV-Wave, Husky) retain their own upstream licenses.
-    </div>
+    <div class="fine">© 2026 NezhaSim authors, Shanghai Jiao Tong University. RotorS, UUV Simulator,
+    ASV-Wave, Husky and the other upstream packages keep their own licenses.</div>
   </div>
 </footer>
-
 </body>
 </html>

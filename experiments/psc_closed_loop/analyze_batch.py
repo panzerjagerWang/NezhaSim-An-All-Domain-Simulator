@@ -16,6 +16,7 @@ Usage: analyze_batch.py <results dir> <out json>
 import csv
 import glob
 import json
+import lzma
 import os
 import sys
 
@@ -25,8 +26,15 @@ from scipy import stats
 root, out_path = sys.argv[1], sys.argv[2]
 
 
+def open_text(path, **kw):
+    """Open path, or its .xz copy when only the compressed file is stored."""
+    if not os.path.exists(path) and os.path.exists(path + ".xz"):
+        return lzma.open(path + ".xz", "rt", **kw)
+    return open(path, **kw)
+
+
 def load(path):
-    with open(path) as f:
+    with open_text(path) as f:
         rows = list(csv.reader(f))
     return rows[0], rows[1:]
 
@@ -62,7 +70,8 @@ def score(run):
         m = (tr >= a) & (tr <= b)
         return bool(m.any() and np.all(np.abs(z[m] - zt) <= 0.2) and np.all(horiz[m] <= 0.3))
 
-    log = open(os.path.join(run, "launch.log"), errors="ignore").read()
+    with open_text(os.path.join(run, "launch.log"), errors="ignore") as f:
+        log = f.read()
     veto = log.count("Skipping force")
     after = tr >= 0
     finite = bool(np.all(np.isfinite(o)))
