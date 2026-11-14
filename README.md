@@ -23,8 +23,14 @@
   [**Tutorials**](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/tutorials.html) ·
   [**Installation**](#installation) ·
   [**Reproduce the paper**](#reproducing-the-experiments) ·
-  [**Video**](https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/#video)
+  [**Video**](https://www.youtube.com/watch?v=Cxp6KpwzhUI)
 </div>
+
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=Cxp6KpwzhUI"><img src="https://img.youtube.com/vi/Cxp6KpwzhUI/maxresdefault.jpg" width="640"
+    alt="NezhaSim video on YouTube (3:48, narrated)"></a><br>
+  <sub>Narrated video, 3 min 48 s: <a href="https://www.youtube.com/watch?v=Cxp6KpwzhUI">watch on YouTube</a></sub>
+</p>
 
 <p align="center">
   <a href="https://panzerjagerwang.github.io/NezhaSim-An-All-Domain-Simulator/">

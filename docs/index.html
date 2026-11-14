@@ -37,7 +37,7 @@
       <div class="buttons">
         <span class="btn disabled" title="The paper is accepted; the link follows on publication">Paper <small>to appear</small></span>
         <a class="btn primary" href="https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator"><svg viewBox="0 0 16 16" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg> Code</a>
-        <a class="btn" href="#video">Video</a>
+        <a class="btn" href="#full-video">Video</a>
         <a class="btn" href="tutorials.html">Tutorials</a>
       </div>
     </div>
@@ -46,7 +46,8 @@
         <video src="assets/video/nezhasim_highlights.mp4" poster="assets/img/poster.webp" autoplay muted loop playsinline controls preload="metadata"></video>
       </div>
       <p class="media-note">Highlights, 37 s, muted: Scenario A in NezhaSim, then the Nezha-Mini and
-      Nezha-F field records next to their NezhaSim runs (Scenarios B and C).</p>
+      Nezha-F field records next to their NezhaSim runs (Scenarios B and C).
+      <a href="#full-video">Full video with narration, 3:48</a></p>
     </div>
   </div>
   <svg class="waterline" viewBox="0 0 1440 70" preserveAspectRatio="none" aria-hidden="true">
@@ -94,9 +95,24 @@
   </div>
 </section>
 
-<section class="block alt">
+<section class="block alt" id="full-video">
   <div class="wrap">
-    <div class="section-head"><span class="idx">02</span><h2>Three components</h2></div>
+    <div class="section-head"><span class="idx">02</span><h2>Video</h2></div>
+    <p class="lead">A narrated walk-through of the paper, 3 min 48 s with English subtitles: the three
+    components, Scenarios A to C with field footage, and the closed-loop comparison of PSC with rigid
+    switching.</p>
+    <div class="media-frame video-embed">
+      <iframe src="https://www.youtube-nocookie.com/embed/Cxp6KpwzhUI?rel=0" title="NezhaSim: Bridging Air, Land and Ocean Through ROS" loading="lazy"
+        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+    </div>
+    <p class="media-note"><a href="https://www.youtube.com/watch?v=Cxp6KpwzhUI">Watch on YouTube</a></p>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="section-head"><span class="idx">03</span><h2>Three components</h2></div>
     <p class="lead">NezhaSim refactors RotorS, the UUV Simulator, ASV-Wave and the Husky simulator
     into one engine and adds three parts on top. It is a system-level integration layer for
     controller development and debugging, not a replacement for CFD.</p>
@@ -132,9 +148,9 @@
   </div>
 </section>
 
-<section class="block" id="results">
+<section class="block alt" id="results">
   <div class="wrap">
-    <div class="section-head"><span class="idx">03</span><h2>Validation</h2></div>
+    <div class="section-head"><span class="idx">04</span><h2>Validation</h2></div>
     <p class="lead">Three scenarios and a closed-loop PSC test. Numbers are those of the paper.</p>
 
     <div class="scenario">
@@ -202,9 +218,9 @@
   </div>
 </section>
 
-<section class="block alt">
+<section class="block">
   <div class="wrap">
-    <div class="section-head"><span class="idx">04</span><h2>Robots and worlds</h2></div>
+    <div class="section-head"><span class="idx">05</span><h2>Robots and worlds</h2></div>
     <p class="lead">Transmedium vehicles of the Nezha family, a triple-domain Husky, RexROV and the
     stock Iris quadrotor, in lakes, open ocean with spectral waves and surveyed sites.</p>
     <div class="table-wrap" style="margin-top:18px">
@@ -220,10 +236,10 @@
   </div>
 </section>
 
-<section class="block">
+<section class="block alt">
   <div class="wrap grid-2">
     <div>
-      <div class="section-head"><span class="idx">05</span><h2>Get started</h2></div>
+      <div class="section-head"><span class="idx">06</span><h2>Get started</h2></div>
       <p>Ubuntu 20.04, ROS Noetic, Gazebo 11. The full guide is on the <a href="installation.html">installation page</a>.</p>
       <pre>git clone --recurse-submodules \
   https://github.com/panzerjagerWang/NezhaSim-An-All-Domain-Simulator.git ~/nezha_ws
@@ -237,7 +253,7 @@ roslaunch nezha_gazebo nezha_mini_lake.launch paused:=false</pre>
       <p><a href="tutorials.html">Continue with the tutorials →</a></p>
     </div>
     <div id="reproduce">
-      <div class="section-head"><span class="idx">06</span><h2>Reproduce the paper</h2></div>
+      <div class="section-head"><span class="idx">07</span><h2>Reproduce the paper</h2></div>
       <p>Scripts, training data and recorded runs are in the repository.</p>
       <div class="table-wrap">
         <table>
@@ -254,9 +270,9 @@ roslaunch nezha_gazebo nezha_mini_lake.launch paused:=false</pre>
   </div>
 </section>
 
-<section class="block alt" id="cite">
+<section class="block" id="cite">
   <div class="wrap">
-    <div class="section-head"><span class="idx">07</span><h2>Citation</h2></div>
+    <div class="section-head"><span class="idx">08</span><h2>Citation</h2></div>
     <p>If NezhaSim helps your research, please cite the paper (to appear):</p>
     <pre>@article{wang2026nezhasim,
   title   = {NezhaSim: Bridging Air, Land and Ocean Through ROS},
